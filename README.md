@@ -9,6 +9,50 @@ Despite its publication nearly 25 years ago, the controversial book The Bell Cur
 Although TBC has been criticized extensively, these responses have mostly come from social psychologists and not statisticians. For this report, I intend to evaluate the statistical meaning of 24 of the nearly 3 dozen models via bootstrap regression. In doing so, I will illustrate the impact of two scientific philosophies, explanation and prediction, in the context of presenting statistical models to the public. I will describe why prediction is the only philosophy relevant to the claims in TBC and, finally, that the 24 probability models are inadequate in supporting the authors’ public policy recommendations. 
 
 ***
+Methods
+***
+1. Specify a training dataset and formula consistent with a TBC model.
+
+2. Fit 10,000 logistic regression models via bootstrapping (i.e., resampling the observed joint distribution with equal sizes)
+
+3. Apply each bootstrapped model to the training data.
+
+4. Map the modeled probabilities to a classification by selecting a cutoff value
+
+5. Build a confusion matrix with the modeled classifications and actual target data.
+
+6. Calculate various performance metrics for a binary target, in particular, MCC.
+
+7. Repeat steps 4 - 6 for a large range of possible cutoff values (i.e., a linear grid of length 500 between 0 and 1).
+
+8. Inspect the distribution of MCC across all cutoff values to find the maximum MCC value.
+
+9. With the IQ factor on the x-axis, plot the average observed target and bootstrapped classifications for a set of cutoff values (including that which maximizes MCC). Use the plot to build intuition on the maximum MCC value.
+
+10. Repeat all prior steps for each of the 24 training datasets and formulae.
+
+11. Summarize the maximum MCC values across all reproduced TBC models and by training and holdout data.
+
+These steps are implemented in R using the following scripts within this repository:
+
+* *000_Misc.R*: Attaches needed packages and defines a convenience function to report timing
+
+* *100_Resampling.R*: Custom functions to perform resampling techniques via bootstrapping and the jackknife method
+
+* *200_Classification.R*: Custom functions to create classifications from modeled probabilities and then quantify their performance
+
+* *300_Visualizations.R*: Custom functions to create various visualizations to understand the predictive performance of binary classifications
+
+* *400_Model_Definitions.R*: Parameters used to define and reproduce logistic regression models from The Bell Curve
+
+* *TBC_Bootstrap.R*: Recursive code that executes a batch run for each TBC probability model. **This script is the workhorse of the entire project**. See its code for details.
+
+**Note**: When 10,000 bootstrap iterations are used on all 24 models in the prior script, the entire recursive batch process:
+
+- Produces 941 files in the "100 Data" folder, 6.76 GBs in total
+- Takes 4 - 5 hours
+
+***
 References
 ***
 
