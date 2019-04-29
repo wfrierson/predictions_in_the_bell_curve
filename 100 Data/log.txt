@@ -1,0 +1,25 @@
+
+poverty, total runtime = 1109.7
+poverty.hs, total runtime = 480.8
+dropout, total runtime = 1378.3
+dropout_interaction, total runtime = 1379.1
+get_ged, total runtime = 1139.7
+get_bachelors, total runtime = 1506.7
+oolf4wks, total runtime = 479.3
+oolf4wks.hs, total runtime = 259.3
+oolf4wks.col, total runtime = 242.8
+unemployed4wks, total runtime = 430.4
+unemployed4wks.hs, total runtime = 233.1
+unemployed4wks.col, total runtime = 237.3
+ever_married30, total runtime = 489.3
+ever_married30.hs, total runtime = 330.6
+ever_married30.col, total runtime = 224.6
+divorced_in5yrs, total runtime = 715.5
+divorced_in5yrs.hs, total runtime = 368.6
+divorced_in5yrs.col, total runtime = 288.4
+divorced_in5yrs_parents, total runtime = 712.8
+surveyed_in_jail, total runtime = 564.6
+surveyed_in_jail.hs, total runtime = 282.2
+middle_class_values, total runtime = 1074.4
+middle_class_values.hs, total runtime = 376
+middle_class_values.col, total runtime = 267.7
