@@ -47,7 +47,7 @@ For 10,000 bootstrap iterations and each TBC model:
 
 These steps are implemented in R using the following scripts within this repository:
 
-* *000_Misc.R*: Attaches needed packages and defines a convenience functions
+* *000_Misc.R*: Attaches needed packages and defines convenience functions
 
 * *100_Resampling.R*: Custom functions to perform resampling techniques via bootstrapping and the jackknife method
 
@@ -72,7 +72,7 @@ References
 
 2) Bureau of Labor Statistics, U.S. Department of Labor. National Longitudinal Survey of Youth 1979 cohort, 1979-2012 (rounds 1-25). Produced and distributed by the Center for Human Resource Research, The Ohio State University. Columbus, OH: 2014.
 
-3) prepared for the U.S. Department of Labor by Center for Human Resource Research, The Ohio State University. (2001). NLSY79 users' guide : a guide to the 1979-2000 National Longitudinal Survey of Youth data. Columbus, Ohio :Center for Human Resource Research, Ohio State University.
+3) Prepared for the U.S. Department of Labor by Center for Human Resource Research, The Ohio State University. (2001). NLSY79 users' guide : a guide to the 1979-2000 National Longitudinal Survey of Youth data. Columbus, Ohio :Center for Human Resource Research, Ohio State University.
 
 4) Heckman, J. (1995). Lessons from The Bell Curve. Journal of Political Economy, 103(5), 1091–1120.
 
@@ -91,3 +91,5 @@ References
 11) Harrell, F. E., Lee, K. L., & Mark, D. B. (1996). Tutorial in Biostatistics: Multivariable prognostic models. Statistics in Medicine, 15:361-387.
 
 12) Herrnstein and Murray (1994). Nation.txt, Nation.hdr, and 2TBC_Documentation.ascii. Retrieved from http://www.rasmusen.org/xpacioli/bellcurve.
+
+13) Bradley Efron (1987) Better Bootstrap Confidence Intervals, Journal of the American Statistical Association, 82:397, 171-185, DOI: 10.1080/01621459.1987.10478410.
