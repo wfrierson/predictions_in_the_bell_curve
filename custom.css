@@ -1,0 +1,22 @@
+blockquote {
+    background: #F5F5F5;
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 14px;
+    border-left: 5px solid #eee;
+}
+
+TOC {
+	width: 500px
+}
+
+caption {
+      color: black;
+      font-weight: bold;
+      font-size: 12pt;
+} 
+
+p.caption {
+  font-size: 12pt;
+  font-weight: bold;
+}
