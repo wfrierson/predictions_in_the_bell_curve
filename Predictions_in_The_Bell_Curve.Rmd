@@ -59,7 +59,7 @@ Despite its publication nearly 25 years ago, the controversial book The Bell Cur
 
 |     *I originally wrote this for a data science master's course. A friend had mentioned TBC after hearing an interview with Charles Murray. I had not heard much about TBC at that time. After going through the book, I found it very odd that no raw data (i.e., observed data points, not just modeled curves) was presented to readers, and that causal models were mixed up with predictive models. Since TBC is politically motivated, I wanted to reproduce as many models as possible and do a more thorough analysis.* __I want to be clear that I never agreed with the arguments or recommendations in TBC.__ *I don't endorse the book. In fact, this paper demonstrates how these 24 TBC models are unreliable.*
 
-|     *For non-technical readers, I recommend reading the following sections: [Background](#background), [Comparison of Optimal MCC Values](#optimalMCC), and [Discussion](#discussion). For statisticians and data scientists, all results are reproducible with an R project made available on Github. See the [Methods](#methods) section for more details. Also, this markdown document uses code folding. To see the underlying code, click the adjacent "CODE" button. From a data science perspective, this project is interesting because it help illustrate:*
+|     *For non-technical readers, I recommend reading the following sections: [Background](#background), [Comparison of Optimal MCC Values](#optimalMCC), and [Discussion](#discussion). For statisticians and data scientists, all results are reproducible with an R project made available on [Github](https://github.com/wfrierson/predictions_in_the_bell_curve/tree/master/200%20Code). See the [Methods](#methods) section for more details. Also, this markdown document uses code folding. To see the underlying code, click the adjacent "CODE" button. From a data science perspective, this project is interesting because it help illustrate:*
 
 * _Reproducible research_
 
@@ -940,23 +940,24 @@ For 10,000 bootstrap iterations and each TBC model:
 __Note__: MCC data related to the holdout sample use bootstrapped percentile confidence intervals because the fitted probability models were based on training data. Hence, BCa intervals aren't meaningful for MCC holdout data.
 
 ```{r algorithm, out.width = '60%', fig.pos = 'H', fig.cap = 'Procedure used to produce distributions of MCC values with optimism correction'}
-# For LaTeX code used to generate this png, see '200 Code/Bootstrap Validation Algorithm.tex'
+# For LaTeX code used to generate this png, see:
+# https://github.com/wfrierson/predictions_in_the_bell_curve/blob/master/200%20Code/Bootstrap%20Validation%20Algorithm.tex
 knitr::include_graphics(file.path(code.folder, 'Bootstrap Validation Algorithm.png'))
 ```
 
 These steps are implemented in R using the following scripts within this repository:
 
-* *000_Misc.R*: Attaches needed packages and defines a convenience functions
+* [000_Misc.R](https://github.com/wfrierson/predictions_in_the_bell_curve/blob/master/200%20Code/000_Misc.R): Attaches needed packages and defines convenience functions
 
-* *100_Resampling.R*: Custom functions to perform resampling techniques via bootstrapping and the jackknife method
+* [100_Resampling.R](https://github.com/wfrierson/predictions_in_the_bell_curve/blob/master/200%20Code/100_Resampling.R): Custom functions to perform resampling techniques via bootstrapping and the jackknife method
 
-* *200_Classification.R*: Custom functions to create classifications from modeled probabilities and then quantify their performance
+* [200_Classification.R](https://github.com/wfrierson/predictions_in_the_bell_curve/blob/master/200%20Code/200_Classification.R): Custom functions to create classifications from modeled probabilities and then quantify their performance
 
-* *300_Visualizations.R*: Custom functions to create various visualizations to understand the predictive performance of binary classifications
+* [300_Visualizations.R](https://github.com/wfrierson/predictions_in_the_bell_curve/blob/master/200%20Code/300_Visualizations.R): Custom functions to create various visualizations to understand the predictive performance of binary classifications
 
-* *400_Model_Definitions.R*: Parameters used to define and reproduce logistic regression models from The Bell Curve
+* [400_Model_Definitions.R](https://github.com/wfrierson/predictions_in_the_bell_curve/blob/master/200%20Code/400_Model_Definitions.R): Parameters used to define and reproduce logistic regression models from The Bell Curve
 
-* *TBC_Bootstrap.R*: Recursive code that executes a batch run for each TBC probability model. **This script is the workhorse of the entire project**. See its code for details.
+* [TBC_Bootstrap.R](https://github.com/wfrierson/predictions_in_the_bell_curve/blob/master/200%20Code/TBC_Bootstrap.R): Recursive code that executes a batch run for each TBC probability model. **This script is the workhorse of the entire project**. See its code for details.
 
 **Note**: When 10,000 bootstrap iterations are used on all 24 models in the prior script (with parallel computing), the entire recursive batch process:
 
