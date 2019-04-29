@@ -2,11 +2,16 @@
 title: "Predictions in The Bell Curve"
 subtitle: "How conflating statistical philosophies can confuse the public"
 author: "Will Frierson"
-date: "December 10, 2018"
+date: '`r format(Sys.time(), "%Y-%m-%d")`'
 output: 
   html_document:
     toc: true
     toc_float: true
+    toc_depth: 3
+    css: custom.css
+    code_folding: hide
+    fig.caption: true
+    theme: sandstone
 ---
 
 <style type="text/css">
@@ -17,17 +22,56 @@ output:
 }
 </style>
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, dev = 'svg')
+<script>
+$(document).ready(function() {
+  $items = $('div#TOC li');
+  $items.each(function(idx) {
+    num_ul = $(this).parentsUntil('#TOC').length;
+    $(this).css({'text-indent': num_ul * 10, 'padding-left': 0});
+  });
+
+});
+</script>
+
+```{r knitr, include=FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE
+  , message = FALSE
+  , dev = 'svg'
+  , root.dir = "B:/DATA 512/Final Project"
+  , fig.align = "center"
+  , fig.width = 12
+  , fig.height = 8
+)
 ```
 
 # Introduction
 
 Despite its publication nearly 25 years ago, the controversial book The Bell Curve (TBC)[^1] has persisted in conversations about IQ. The authors, Richard Herrnstein and Charles Murray, claim that IQ strongly influences many significant life events -- like whether someone will enter poverty, drop out of school, get married, or even go to jail. Even more contentious, they extend the consequences of low IQ to demographics like ethnicity and nationality. As evidence, the authors build and discuss dozens of probability models using public data. 
 
-|     Although TBC has been criticized extensively, these responses have mostly come from social psychologists and not statisticians. For this report, I intend to evaluate the statistical meaning of 24 of the nearly 3 dozen models via bootstrap regression. In doing so, I will illustrate the impact of two scientific philosophies, explanation and prediction, in the context of presenting statistical models to the public. I will describe why prediction is the only philosophy relevant to the claims in TBC and, finally, that the 24 probability models are inadequate in supporting the authors’ public policy recommendations. 
+|     Although TBC has been criticized extensively, these responses have generally come from social psychologists and not statisticians. For this report, I intend to evaluate the statistical meaning of 24 of the nearly 3 dozen models via bootstrap optimism on Matthew's correlation coefficient. In doing so, I will illustrate the impact of two scientific philosophies, explanation and prediction, in the context of presenting statistical models to the public. I will describe why prediction is the only philosophy relevant to the claims in TBC and, finally, that the 24 probability models are inadequate in supporting the authors’ public policy recommendations. 
 
-# Background
+***
+
+### A Note to Readers
+
+*This report is in two pieces: a ~25 page written report and a ~75 page appendix with diagnostic information for the underlying TBC models. Please don't let the total page count discourage you from reading this report! I tried to write in a style similar to that in TBC (style alone, not its content). If a reader could understand the level of math presented in TBC, I hope she could also read this report (though I admit, maybe with a bit more statistical background).*
+
+|     *I originally wrote this for a data science master's course. A friend had mentioned TBC after hearing an interview with Charles Murray. I had not heard much about TBC at that time. After going through the book, I found it very odd that no raw data (i.e., observed data points, not just modeled curves) was presented to readers, and that causal models were mixed up with predictive models. Since TBC is politically motivated, I wanted to reproduce as many models as possible and do a more thorough analysis.* __I want to be clear that I never agreed with the arguments or recommendations in TBC.__ *I don't endorse the book. In fact, this paper demonstrates how these 24 TBC models are unreliable.*
+
+|     *For non-technical readers, I recommend reading the following sections: [Background](#background), [Comparison of Optimal MCC Values](#optimalMCC), and [Discussion](#discussion). For statisticians and data scientists, all results are reproducible with an R project made available on Github. See the [Methods](#methods) section for more details. Also, this markdown document uses code folding. To see the underlying code, click the adjacent "CODE" button. From a data science perspective, this project is interesting because it help illustrate:*
+
+* _Reproducible research_
+
+* _Bootstrap regression_
+
+* _Bias-corrected accelerated confidence intervals_
+
+* _Automated model and report building_
+
+***
+
+# Background{#background}
 
 ## The Bell Curve and its Claims
 TBC stands out not for being a stuffy academic paper, but instead as accessible prose intended for the general population. The book is political, pop-psychology by design. TBC can be simplified into 3 sections: a summary of prior IQ research, a presentation of new probability models derived by the authors, and a discussion of the findings including recommendations for public policy. With this being an accessible book, the probability models are described in simple, interpretable terms. In fact, TBC includes extensive discussion on what multivariate analysis means – from explaining what a “variable” means in statistics to what logistic regression attempts to model. The authors even include an entire appendix titled, “Statistics for People Who Are Sure They Can’t Learn Statistics”. 
@@ -58,12 +102,12 @@ TBC stands out not for being a stuffy academic paper, but instead as accessible 
 *	Whether an individual will be unemployed for four weeks or more
 *	Whether an individual will ever marry before the age of 30
 *	Whether an individual will be divorce within the first 5 years of marriage
-*	Whether an individual will go to jail[include footnote about describing this in more detail later]
-*	Whether an individual will have “Middle Class Values” as defined by the authors[list in the footnotes]
+*	Whether an individual will go to jail
+*	Whether an individual will have “Middle Class Values” as defined by the authors
 
 ## Data Used in The Bell Curve
 
-The data used to evaluate the relationship between IQ and each of these binary targets is the National Longitudinal Survey of Youth 1979 (NLSY79)[^2], which is a public dataset made available by the Bureau of Labor Statistics. In this academic study, 12,686 young Americans (aged 14 – 21 at the survey’s start) of varying backgrounds were interviewed each year between 1979 through 1994. Although the survey continued after this time, the last relevant year for TBC was 1990. These interviews covered a vast number of topics which were tabulated and, more recently, released online.
+The data used to evaluate the relationship between IQ and each of these binary targets is the National Longitudinal Survey of Youth 1979 (NLSY79)[^2], which is a public dataset made available by the Bureau of Labor Statistics. In this academic study, 12,686 young Americans (aged 14 – 21 at the survey’s start) of varying backgrounds were interviewed each year between 1979 through 1994. The last relevant year for TBC was 1990, although the survey continued after this time. These interviews covered a vast number of topics which were tabulated and, more recently, released online.
 
 |     Critics of TBC note that the NLSY79 lacks an explicit measure of cognitive ability. In lieu of such a variable, TBC authors used a military achievement test called the Armed Forces Qualifications Test (AFQT). In 1980, the US Department of Defense and Military Services selected the NLSY79 participants to take a battery of tests that measure knowledge and skill across “general science, arithmetic reasoning, work knowledge, paragraph comprehension, numerical operations, coding speed, auto and shop information, mathematics knowledge, mechanical comprehension, and electronic information.”[^3] Nearly all NLSY79 participants completed the battery. Of these, TBC authors normalized the AFQT score using a revised percentile score from 1989 and labeled it “zAFQT89”.
 
@@ -86,11 +130,11 @@ The data used to evaluate the relationship between IQ and each of these binary t
 
 Because of the book’s controversy and age, much has been said about TBC. This criticism has primarily come from social psychologists and other experts in intelligence. From my perspective, their comments seem embedded in psychology. E.g., from James Heckman’s “Lessons from the Bell Curve”[^4]:
 
->	_[The derived zAFQT89 field] is not the same as the g that can be extracted from test scores available in their data set… They do not emphasize how little of the variation in social outcomes is explained by ADQT or g.”_
+>	_[The derived zAFQT89 field] is not the same as the g that can be extracted from test scores available in their data set… They do not emphasize how little of the variation in social outcomes is explained by AFQT or g.”_
 
 >	_AFQT is an achievement test that can be manipulated by educational interventions… A person’s AFQT score is not an immutable characteristic beyond environmental manipulation._
 
-While there is nothing wrong with these responses, I am surprised how few of them review the probabilities models described in TBC. In fact, I have only found one detailed statistical review of a TBC model. 
+While there is nothing wrong with these responses, I am surprised how few of them review the probability models described in TBC. In fact, I have only found one detailed, statistical review of a TBC model. 
 
 |     In 2007, Dr. Claudia Krenz[^5] posted, in statistical terms, a standard classification analysis of the probability model on poverty using a cutoff value of 50% and the training data to evaluate performance. At a high-level, a classification analysis means that modeled probabilities are converted into a binary field which is then analyzed to evaluate the quality and reliability of the underlying probability model. A cutoff value is typically used to define this conversion, such that a modeled probability above this cutoff value is assumed to be 1. In the context of the poverty model, e.g., NLSY79 participants are assumed to enter poverty when their modeled probabilities are above this cutoff. From Dr. Krenz’s report,
 
@@ -98,33 +142,218 @@ While there is nothing wrong with these responses, I am surprised how few of the
 
 > _I replicated the numbers published in the book's Appendix 4. I then looked at how well the model fit: it didn't, not at all in the published sample (N=3367), not much in another independent one (N=1067). I suspect HM didn't realize they'd made a Type I error, that their model's predictive accuracy for cases living below the POVERTY level was 0%..._
 
-|     I found Dr. Krenz’s analysis interesting but thought it could be improved by extending the classification analysis to more TBC models. Namely, this report reviews 24 probability models from TBC. The 10 binary targets are examined on different NLSY79 subsets. E.g., TBC describes two poverty models: one using participants who only graduated high-school and another with participants who graduated either high-school or college. In general, these data subsets are based on education, gender, employment status, marital status, and age. TBC includes more probability models (e.g., based on IQ for mothers and their children in the NLSY79), but I did not have time to reproduce and review them.
+|     I found Dr. Krenz’s analysis interesting but thought it could be improved by extending the classification analysis to more TBC models. Namely, this report reviews 24 probability models from TBC. The 10 binary targets are examined on different NLSY79 subsets. E.g., TBC describes two poverty models: one using participants who only graduated high-school and another with participants who graduated either high-school or college. In general, these data subsets are based on education, gender, employment status, marital status, and age. TBC includes more probability models (e.g., based on IQ for mothers and their children in the NLSY79), but I did not have time to reproduce and review them in this paper.
 
 |     Whatever my findings would be, I realized that I would need to explain why classification analysis is relevant to evaluating a probability model. Someone unfamiliar with regression analysis might respond: the classification results say nothing about the probability models because they describe different things. In the following sections, I discuss why:
 
 1. Classification results are needed to have a fair and human-centered evaluation since TBC’s public policy recommendations have large ramifications for individuals
 2. TBC’s probability models are most appropriately evaluated as predictive classifications in the context of statistical philosophy
 
-## Human-Centered Evaluation of TBC’s Probability Models
+## Human-Centered Evaluation of TBC’s Probability Models{#hcds}
+
+```{r setup}
+source('200 Code/000_Misc.R')
+source('200 Code/100_Resampling.R')
+source('200 Code/200_Classification.R')
+source('200 Code/300_Visualizations.R')
+source('200 Code/400_Model_Definitions.R')
+
+save.folder <- '100 Data'
+code.folder <- '200 Code'
+
+model.labels <- tbc.models$label
+
+# Get filenames for needed data components
+filenames.output <- file.path(save.folder, paste0(model.labels, '_outputs.rds'))
+filenames.input <- file.path(save.folder, paste0(model.labels, '_inputs.rds'))
+
+filenames.mcc.bootCI.training <- file.path(save.folder, paste0(model.labels, '_DT.mcc.bootCI.training.rds'))
+filenames.mcc.bootCI.holdout <- file.path(save.folder, paste0(model.labels, '_DT.mcc.bootCI.holdout.rds'))
+names(filenames.mcc.bootCI.training) <- model.labels
+names(filenames.mcc.bootCI.holdout) <- model.labels
+
+filenames.probability.bootCI.training <- file.path(save.folder, paste0(model.labels, '_DTs.probability.bootCI.training.rds'))
+filenames.probability.bootCI.holdout <- file.path(save.folder, paste0(model.labels, '_DTs.probability.bootCI.holdout.rds'))
+
+filenames.classification.bootCI.training <- file.path(save.folder, paste0(model.labels, '_DTs.mcc.classification.bootCI.training.rds'))
+filenames.classification.bootCI.holdout <- file.path(save.folder, paste0(model.labels, '_DTs.mcc.classification.bootCI.holdout.rds'))
+
+# Import needed data components
+outputs <- rbindlist(
+  lapply(filenames.output, readRDS)
+  , fill = TRUE
+  , use.names = TRUE
+)
+
+inputs <- lapply(filenames.input, readRDS)
+names(inputs) <- model.labels
+
+DT.mcc.bootCI.training <- rbindlist(lapply(
+    seq_along(filenames.mcc.bootCI.training), function(x) 
+    readRDS(filenames.mcc.bootCI.training[x])[, label := names(filenames.mcc.bootCI.training[x])]
+  )
+  , fill = TRUE
+  , use.names = TRUE
+)
+DT.mcc.bootCI.holdout <- rbindlist(lapply(
+    seq_along(filenames.mcc.bootCI.holdout)
+    , function(x) readRDS(filenames.mcc.bootCI.holdout[x])[, label := names(filenames.mcc.bootCI.holdout[x])]
+  )
+  , fill = TRUE
+  , use.names = TRUE
+)
+
+DTs.probability.bootCI.training <- lapply(filenames.probability.bootCI.training, readRDS)
+DTs.probability.bootCI.holdout <- lapply(filenames.probability.bootCI.holdout, readRDS)
+names(DTs.probability.bootCI.training) <- model.labels
+names(DTs.probability.bootCI.holdout) <- model.labels
+
+DTs.mcc.classification.bootCI.training <- lapply(filenames.classification.bootCI.training, readRDS)
+DTs.mcc.classification.bootCI.holdout <- lapply(filenames.classification.bootCI.holdout, readRDS)
+names(DTs.mcc.classification.bootCI.training) <- model.labels
+names(DTs.mcc.classification.bootCI.holdout) <- model.labels
+
+# Create category field
+outputs[, category := factor(category, levels = unique(tbc.models$category))]
+
+# Organize bootstrapped coefficients
+DT.coef <- rbindlist(
+  lapply(outputs$label, 
+         function(label.var) {
+           DT.label <- as.data.table(outputs[label == label.var])
+           
+           DT.coef.label <-  as.data.table(
+             coef(summary(DT.label[, glm.model][[1]]))
+             , keep.rownames = TRUE
+           )
+           
+           DT.coef.label[, label := DT.label$label]
+
+          return(DT.coef.label)
+         }
+  )
+)
+
+DT.coef.pValue <- dcast(DT.coef, formula = label ~ rn, value.var = 'Pr(>|z|)')
+
+# Calculate the mean modeled response from the poverty model (i.e., Pov89_modeled)
+Pov89_modeled.2stdev <- inputs[['poverty']][['DT.model.training']][
+    , .(
+        prob.model = mean(Pov89_modeled, na.rm = TRUE)
+    )
+    , by = .(zAFQT89_banded = floor(zAFQT89 * 10) / 10)
+][
+    , .(
+        zAFQT89_banded
+        , zero = abs(zAFQT89_banded - (-2))
+        , prob.model
+    )
+][order(zero)][1L, prob.model]
+
+Pov89_modeled.2stdev.formatted <- paste0(floor(Pov89_modeled.2stdev * 1e4) / 1e4 * 1e2, '%')
+
+confusionMatrix.poverty <- inputs[['poverty']][['DT.model.training']][
+  , .(
+    `Did not enter poverty (classification)` = sum(as.integer(Pov89_modeled <= Pov89_modeled.2stdev))
+    , `Enter poverty (classification)` = sum(as.integer(Pov89_modeled > Pov89_modeled.2stdev))
+  )
+  , by = .(Pov89 = ifelse(Pov89 == 0, 'Did not enter poverty (true)', 'Enter poverty (true)'))
+]
+
+accuracy.poverty.formatted <- paste0(
+  floor(
+    as.numeric((confusionMatrix.poverty[1, 2] + confusionMatrix.poverty[2, 3]) / nrow(inputs[['poverty']][['DT.model.training']])) * 1e4
+  ) / 1e2
+  , '%'
+)
+
+probabilityEnterPoverty <- outputs[label == 'poverty', response.mean.training]
+
+probabilityEnterPoverty.formatted <- paste0(floor(probabilityEnterPoverty * 1e4)/1e4 * 1e2, '%')
+
+mcc.poverty <- calculateMCC(
+    TN = confusionMatrix.poverty[1, 2] / nrow(inputs[['poverty']][['DT.model.training']])
+    , FP = confusionMatrix.poverty[1, 3] / nrow(inputs[['poverty']][['DT.model.training']])
+    , FN = confusionMatrix.poverty[2, 2] / nrow(inputs[['poverty']][['DT.model.training']])
+    , TP = confusionMatrix.poverty[2, 3] / nrow(inputs[['poverty']][['DT.model.training']])
+)
+
+mcc.poverty.formatted <- paste0(floor(mcc.poverty * 1e4) / 1e4 * 1e2, '%')
+
+TNR.poverty <- as.numeric(confusionMatrix.poverty[1, 2] / (confusionMatrix.poverty[1, 2] + confusionMatrix.poverty[1, 3]))
+TPR.poverty <- as.numeric(confusionMatrix.poverty[2, 3] / (confusionMatrix.poverty[2, 3] + confusionMatrix.poverty[2, 2]))
+```
 
 Extraordinary claims require extraordinary evidence. When a recommendation for public policy can negatively impact a group of people, material evidence is required to support the claim. With TBC, they cite their probability models as reason to accept their conclusions. In order to assess if these models are meaningful and reliable, they should be evaluated from the perspectives of those who could be harmed by the underlying claims. 
+
 |     This evaluation first requires that the potentially harmed population be well-defined. Revisiting TBC’s claims, the authors say (with my added emphasis):
 
 > _The technically precise description of America’s fertility policy is that it subsidizes births among poor women, who are also **disproportionately at the low end of the intelligence distribution**_.
 
-By saying “disproportionately”, the authors imply that there is some IQ value below which the negative consequences of their probability models become most severe and worthy of political action. More specifically, if the authors are to objectively identify individuals they think have too low of IQ, they would need to state such an IQ value. And if their probability models are to be taken seriously, then the authors should use them to clarify what “disproportionate” means.
+By saying “disproportionately”, the authors imply that there is some IQ value below which the negative consequences of their probability models become most severe and worthy of political action. More specifically, if the authors are to objectively identify individuals they think have too low of IQ, they would need to state such an IQ value. And if their probability models are to be taken seriously, then the authors should use them to clarify what “disproportionate” means. Below, I play devil's advocate for TBC authors by finding such a disproportionate IQ.
 	
-|     Focusing on a binary target with a negative outcome like poverty, a “cutoff IQ” value could be defined as the IQ where the average of modeled probabilities across a dataset is, e.g., above 50%. Said more simply, individuals would be flagged as having too low of IQ when the probability model suggests they are “likely” to enter poverty, i.e., at least a 50% chance of occurring. It’s also important to realize that all the binary targets in TBC tend to have monotonic relationship with IQ, e.g., individuals with lower IQ tend to have greater observed frequencies of entering poverty in 1989. Combining this knowledge with the description of a “cutoff IQ” above, each TBC model could identify individuals impacted by the authors’ recommendations using either a cutoff value for IQ OR modeled probability, i.e., they are linked.
+|     Focusing on a binary target with a negative outcome like poverty, a “cutoff IQ” value could -- hypothetically -- be defined as the IQ where the average of modeled probabilities across a dataset is, e.g., above `r Pov89_modeled.2stdev.formatted` (which is two standard deviations below the mean frequency of entering poverty, i.e., where zAFQT89 = -2 in the training data). Said more simply, individuals would be flagged as having too low of IQ when the probability model suggests they are at least as likely to enter poverty as an "abnormally low" IQ defined by the training data. 
+
+|     The figure below shows the training data used to build the poverty model (in data points) and the modeled probability built from that data (as a fitted curve). The red vertical line shows the "cutoff IQ" and the red horizontal line shows the associated modeled probability (i.e., `r Pov89_modeled.2stdev.formatted`) that could be used to define a population impacted by the authors' recommendations. (Note: This figure will be discussed in more detail later on. For now, it is displayed to motivate "cutoff IQs and probabilities".)
+
+```{r cutoffIQ, fig.width = 7, fig.height = 5, fig.cap = 'Plot of observed vs modeled probabilities across zAFQT89'}
+plot.training.actual <- ggplot(
+  inputs[['poverty']][['DT.model.training']][
+    , .(
+      response = mean(Pov89)
+      , modeled = mean(Pov89_modeled)
+    )
+    , by = .(
+      zAFQT89_banded = floor(zAFQT89 * 10)/10
+    )
+  ]
+  , aes(
+    x = zAFQT89_banded
+    , y = response
+  )
+) + 
+  geom_point() + 
+  theme_bw() + 
+  ylab(paste('%', tbc.models[label == 'poverty', target.description])) 
+# +
+#   labs(
+#     color = 'Category'
+#     , shape = 'Category'
+#   )
+
+ggplotly(
+  plot.training.actual + 
+    geom_line(aes(y = modeled), color = lightBlue) + 
+    geom_segment(
+      x = -3
+      , xend = -2
+      , y = Pov89_modeled.2stdev
+      , yend = Pov89_modeled.2stdev
+      , linetype = 2
+      , color = 'red'
+    ) + 
+    geom_segment(
+      x = -2
+      , xend = -2
+      , y = 0
+      , yend = Pov89_modeled.2stdev
+      , linetype = 2
+      , color = 'red'
+    )
+)
+```
+
+|     It’s also important to realize that all the binary targets in TBC tend to have monotonic relationship with IQ, e.g., individuals with lower IQ tend to have greater observed frequencies of entering poverty in 1989. Combining this knowledge with the description of a “cutoff IQ” above, each TBC model could identify individuals impacted by the authors’ recommendations using either a cutoff value for IQ **OR** modeled probability, i.e., they are linked. From the figure above, the "cutoff IQ" of -2 is linked with the "cutoff probability" of `r Pov89_modeled.2stdev.formatted`.
 
 |     Recalling Dr. Krenz’s analysis, a cutoff value used in classification acts in the same way as a modeled probability linked to a “cutoff IQ”. Hence, a classification analysis of TBC’s probability models is a human-centered evaluation that is necessary to balance the authors’ controversial claims. 
 
-## Statistical Philosophy in The Bell Curve
+## Statistical Philosophy in The Bell Curve{#statPhilosophy}
 
-While the prior section may sound trivial to a statistician or data scientist, my point is that fairness recommends a classification analysis. In this section, I go further by claiming that TBC’s probability models should only be evaluated as predictive classifications based on the statistical philosophy best describing TBC’s models.
+While the prior section may sound trivial to a statistician or data scientist, my point is that __fairness recommends a classification analysis__. In this section, I go further by claiming that TBC’s probability models should only be evaluated as predictive classifications based on the statistical philosophy best describing TBC’s models.
 
 |     Dr. Galit Shmueli has written many publications about two common statistical philosophies: explanation (or sometimes called causality) and prediction[^6]. Dr. Shmueli’s main premise is (with my added emphasis):
 
-> …[Explanation and prediction] are often conflated, yet **the causal versus predictive distinction has a large impact on each step of the statistical modeling process and on its consequences.** Although not explicitly stated in the statistics methodology literature, applied statisticians instinctively sense that predicting and explaining are different_.
+> …_[Explanation and prediction] are often conflated, yet **the causal versus predictive distinction has a large impact on each step of the statistical modeling process and on its consequences.** Although not explicitly stated in the statistics methodology literature, applied statisticians instinctively sense that predicting and explaining are different_.
 
 At a high-level, explanatory models: 
 
@@ -139,24 +368,24 @@ Whereas predictive models:
 *	Describe indirect associations among the model variables and the model target
 *	Are prospective by focusing on future data
 *	Are motivated more by observed data than by theory
-*	Prioritize the individual case of the underlying data
+*	Prioritize the individual cases of the underlying data
 *	Are evaluated more at the model level and often on one or more holdout datasets
 
-How do these criteria play out in TBC? Quotes from the authors reflect their thoughts on explanatory modeling in TBC:
+How do these criteria play out in TBC? Quotes from the authors' reflect their thoughts on explanatory modeling in TBC:
 
 1.	The probability models are generally assumed to be explanatory in nature:
 
->	Part II was circumscribed, taking on social behaviors one at a time, focusing on causal roles…
+>	_Part II was circumscribed, taking on social behaviors one at a time, focusing on causal roles_…
 
->	If after looking at a variety of these other things which both theory and common sense say should have some bearing on whether a person ends up in poverty, but one ends up with a large, statistically independent role for I.Q., it seems to me to make a causal statement that I.Q. looks like its a cause of poverty, it is a reasonable thing to do.[^7]
+>	_If after looking at a variety of these other things which both theory and common sense say should have some bearing on whether a person ends up in poverty, but one ends up with a large, statistically independent role for I.Q., it seems to me to make a causal statement that I.Q. looks like its a cause of poverty, it is a reasonable thing to do._[^7]
 
->	By the end of the chapter [on poverty], we will have drawn a controversial conclusion. How did we get there? What makes us think that we have got our causal ordering right? We will walk through the analyses that lie behind our conclusions…
+>	_By the end of the chapter [on poverty], we will have drawn a controversial conclusion. How did we get there? What makes us think that we have got our causal ordering right? We will walk through the analyses that lie behind our conclusions_…
 
-2.	The authors focus on individual parameters, namely IQ, instead of the overall model (R2 in the quote below):
+2.	The authors focus on individual parameters, namely IQ, instead of the overall model (R-squared in the quote below):
 
->	Even an inherently strong relationship can result in low values of R2 if the data points are bunched in various ways, and relatively noisy relationships can result in high values if the sample includes disproportionate numbers of outlier… We therefore consider the regression coefficients themselves (and their associated p values) to suit our analytic purposes better than R2, and that is why those are the ones we relied on in the text.
+>	_Even an inherently strong relationship can result in low values of R2 if the data points are bunched in various ways, and relatively noisy relationships can result in high values if the sample includes disproportionate numbers of outliers… We therefore consider the regression coefficients themselves (and their associated p values) to suit our analytic purposes better than R2, and that is why those are the ones we relied on in the text_.
 
-__Note__: The authors do have a point that R2 is not the most meaningful statistic for every model. However, they did not adequately motivate why probability models with rare events, as in the poverty model with an overall frequency of 7%, should ignore diagnostics at the model level.
+ __Note__: The authors do have a point that R-squared is not the most meaningful statistic for every model. However, they did not adequately motivate why probability models with rare events, as in the poverty model with an overall frequency of `r probabilityEnterPoverty.formatted`, should ignore diagnostics at the model level.
 
 Below, I comment on the role of predictive modeling in TBC:
 
@@ -164,20 +393,13 @@ Below, I comment on the role of predictive modeling in TBC:
 
 2.	As mentioned in the section introducing data used in TBC, most binary targets are defined to be measured nearly a decade in the future (relative to when IQ was measured). Undoubtedly, modeling such targets is a prospective process.
 
-3.	The probability models in TBC should prioritize the individual. In the prior section, I explained why fairness recommends the individual-focused classification analysis. Also, TBC’s authors frequently comment on the importance of acknowledging individuals and not to be judgmental: “We cannot think of a legitimate argument why any encounter between individual whites and blacks need be affected by the knowledge that an agqregate ethnic difference in measured intelligence is genetic instead of environmental.”
+3.	The probability models in TBC should prioritize the individual. In the prior section, I explained why fairness recommends the individual-focused classification analysis. Also, TBC’s authors frequently comment on the importance of acknowledging individuals and not to be judgmental: “We cannot think of a legitimate argument why any encounter between individual whites and blacks need be affected by the knowledge that an aggregate ethnic difference in measured intelligence is genetic instead of environmental.”
 
-Overall, I claim that TBC’s probability models are more predictive than explanatory in nature and so they should be evaluated as such.
+Overall, I claim that TBC’s probability models more closely follow predictive philosophy than explanatory, and so they should be evaluated as such.
 
-## Roadmap for Assessing Predictive Power
+## Why Use Matthew's Correlation Coefficient?{#mcc}
 
-Many of the binary targets are uncommon to rare in occurrence. In logistic regression, this is called imbalanced data and can make some statistics unreliable. To counter this imbalance, I estimate Matthew’s Correlation Coefficient (MCC), which is the correlation between the binary target and the binary classification derived from a TBC probability model. MCC is robust to imbalanced data because it accounts for all possible matching scenarios[^8]:
-
-*	True Positive: classification expects the target event to occur and it did according to the binary target
-*	False Positive: classification expects the target event to occur but it did not according to the binary target
-*	True Negative: classification expects the target event not to occur and it did not
-*	False Negative: classification expects the target event not to occur but it did
-
-|     As a correlation, MCC can be interpreted in the same way as a regular (Pearson) correlation. The following guideline seems reasonable in my statistical experience[^9]:
+Many of the binary targets are uncommon-to-rare in occurrence. In logistic regression, this is called _imbalanced data_ and can make some statistics unreliable. To counter this imbalance, I estimate Matthew’s Correlation Coefficient (MCC), which is the correlation between the binary target and the binary classification derived from a TBC probability model. MCC can be interpreted in the same way as a regular (Pearson) correlation. The following guideline is a reasonable starting point to judge MCC values[^8]:
 
 |Size of Correlation | Interpretation|
 |--------------------|--------------------|
@@ -187,13 +409,433 @@ Many of the binary targets are uncommon to rare in occurrence. In logistic regre
 |0.30 to 0.50 (−0.30 to −0.50) | Low positive (negative) correlation|
 |0.00 to 0.30 (0.00 to −0.30)	| negligible correlation|
 
-|     Although MCC is appropriate for the binary targets in NLSY79, it does not fully measure predictive power by itself. To do so, I reproduce a TBC model, apply it to an unseen (i.e., holdout) sample, use a cutoff value to create classifications, and then evaluate MCC. (As a comparison, I also apply the TBC model to the training data.) When MCC is sufficiently above 0 for the holdout data (e.g., above 50% via the above table), it gives evidence that the model has good predictive power. When MCC is negative or far below 50%, the model has poor predictive power.
+MCC is robust to imbalanced data because it accounts for all possible classification scenarios[^9] (i.e., in the equation below, each scenario is represented in the numerator):
 
-|     Lastly, since the binary targets are noisy and the NLSY79 datasets are small, I repeat the latter predictive evaluation 10,000 times via bootstrap regression. The only change to the prior evaluation process is in slightly adjusting the modeling data by resampling rows (i.e., NLSY79 participants) from the original data (with replacement and ensuring the new sample has the same size as the original data).
+*	True Positive (TP): number of observations where classification expects the target event to occur and it did according to the binary target
+*	False Positive (FP): number of observations where classification expects the target event to occur but it did not according to the binary target
+*	True Negative (TN): number of observations where classification expects the target event not to occur and it did not according to the binary target
+*	False Negative (FN): number of observations where classification expects the target event not to occur but it did according to the binary target
 
-|     From the bootstrapped distribution of MCC values for each of the 24 probability models, I calculate an appropriate confidence interval around the original sample MCC value across a range of cutoff values. I then find the largest average bootstrapped MCC value (when evaluated on both the training and holdout data) and compare the optimal MCC values over each TBC model.
+$${\displaystyle {\text{MCC}}={\frac {{\mathit {TP}}\times {\mathit {TN}}-{\mathit {FP}}\times {\mathit {FN}}}{\sqrt {({\mathit {TP}}+{\mathit {FP}})({\mathit {TP}}+{\mathit {FN}})({\mathit {TN}}+{\mathit {FP}})({\mathit {TN}}+{\mathit {FN}})}}}}$$
+ 
+|     To better understand imbalanced data, the figure below compares the modeled probabilities for NLSY79 participants to enter poverty with their true outcomes in 1989. Each data point represents a NLSY79 participant included in the poverty model (with its exact x-axis location "jittered" in order to see data volumes more easily). The red horizontal line represents the -2 standard deviation cutoff probability of `r Pov89_modeled.2stdev.formatted` described [above](#hcds). The four rectangular regions represent each of the four classification scenarios. Below the figure is a table showing the total number of participants in each classification scenario.
 
-# Data
+```{r visualConfusionMatrix, fig.cap = 'Plot comparing different classification scenarios'}
+ggplot() +
+  geom_jitter(
+    data = inputs[['poverty']][['DT.model.training']]
+    , aes(
+      x = factor(ifelse(Pov89 == 0, 'No', 'Yes'))
+      , y = Pov89_modeled
+    )
+  ) +
+  geom_hline(
+    yintercept = Pov89_modeled.2stdev
+    , linetype = 2
+    , color = 'red'
+  ) +
+  geom_rect(
+    data = data.table(
+      xstart = rep(c(0.5, 1.5), 2)
+      , xend = rep(c(1.5, 2.5), 2)
+      , ystart = c(0, 0, Pov89_modeled.2stdev, Pov89_modeled.2stdev)
+      , yend = c(Pov89_modeled.2stdev, Pov89_modeled.2stdev, 1, 1)
+      , color = c('TN', 'FN', 'FP', 'TP')
+    )
+    , aes(
+      xmin = xstart
+      , xmax = xend
+      , ymin = ystart
+      , ymax = yend
+      , fill = factor(color)
+    )
+    , alpha = 0.5
+  ) +
+  labs(fill = 'Classification Scenarios:') +
+  xlab('Under the official poverty line in 1989') +
+  ylab('Modeled Probability') +
+  theme_bw() +
+  theme(
+    axis.text=element_text(size = 16)
+    , axis.title=element_text(size = 16)
+    , legend.text=element_text(size = 16)
+    , legend.title=element_text(size = 16)
+    , legend.position="bottom"
+  )
+```
+
+```{r povertyConfusionMatrix}
+kable(
+  confusionMatrix.poverty[
+    , .(
+      `Poverty Model Target` = Pov89
+      , `Did not enter poverty (classification)`
+      , `Enter poverty (classification)`
+    )
+  ]
+  , caption = 'Table comparing different classification scenarios (i.e., confusion matrix)'
+  , align = rep('c', 3)
+) %>% kable_styling(bootstrap_options = "striped", full_width = F, position = 'center')
+```
+
+|     A common classification performance metric is called "accuracy", which here means the percent of NLSY79 participants that were correctly classified as entering poverty or not in 1989. At the cutoff probability of `r Pov89_modeled.2stdev.formatted`, the accuracy is `r accuracy.poverty.formatted`. While this seems very high, the above figure shows its weakness: __very few of the NLSY79 participants that truly entered poverty were classified to do so__ (as shown in the purple 'TP' region and the above table). Instead, most of the "true" classifications came from participants who did not enter poverty in 1989 (as shown in the blue 'TN' region). Hence, the accuracy metric is reflecting that the binary target is _rare_, more than it's describing the performance of the underlying model. In comparison, the MCC value using the same cutoff probability is `r mcc.poverty.formatted`, which better agrees with the poorly populated 'TP' region in purple.
+
+|     Lastly, we can see the impact of rare events on these performance metrics through simulations. In particular, we can hold constant the rate of true positive and true negative classifications (TPR and TNR, resp.) while varying the rarity of the binary target, and then calculate accuracy and MCC. The figure below shows the simulated accuracy and MCC values at the TPR and TNR values observed in the poverty model. The takeaway is that MCC accounts for rare binary targets whereas accuracy does not (and so MCC is more reliable).
+
+```{r accuracyVsMCC_simulations, fig.cap = 'Plot comparing accuracy and Matthews Correlation Coefficient as classification metrics for imbalanced data'}
+simulateConfusionMatrix.constant.TNR.TPR <- function(TNR, TPR, pctPositive) {
+  TP <- pctPositive * TPR
+  TN <- (1 - pctPositive) * TNR
+  
+  output <- list(
+    TN = TN
+    , FN = pctPositive * (1 - TPR)
+    , FP = (1 - pctPositive) * (1 - TNR)
+    , TP = TP
+  )
+  
+  return(output)
+}
+
+pctPositive.range <- seq(from = 0, to = 1, length.out = 101)
+TPR.range <- seq(from = 0, to = 1, length.out = 101)
+TNR.range <- seq(from = 0, to = 1, length.out = 101)
+DT.demoMCC <- as.data.table(
+  expand.grid(
+    pctPositive.range
+    , TPR.range
+    , TNR.range
+  )
+)
+setnames(DT.demoMCC, paste0('Var',1:3), c('pctPositive', 'TPR', 'TNR'))
+DT.demoMCC[, c('TN', 'FN', 'FP', 'TP') := as.list(simulateConfusionMatrix.constant.TNR.TPR(TNR, TPR, pctPositive))]
+DT.demoMCC[, mcc := calculateMCC(TN, FN, FP, TP)]
+DT.demoMCC[, accuracy := (TN + TP) / (TN + FN + FP + TP)]
+DT.demoMCC[, TPR_TNR := factor(paste0(TPR,'_',TNR))]
+
+ggplot(
+  DT.demoMCC[TPR == floor(TPR.poverty * 1e2) / 1e2 & TNR == floor(TNR.poverty * 1e2) / 1e2]
+  , aes(
+    x = pctPositive
+    , y = mcc
+    , color = 'mcc'
+  )
+) + 
+  geom_line() + 
+  geom_line(
+    aes(
+      y = accuracy
+      , color = 'accuracy'
+    )
+  ) +
+  geom_vline(aes(
+      xintercept = probabilityEnterPoverty
+      , color = 'poverty'
+    )
+      , linetype = 2
+      , size = 1.25
+      , show.legend = FALSE
+    ) +
+  scale_colour_manual(
+    name = 'Classification Metrics:\n(TPR = 0.07, TNR = 0.99)'
+    , values = c(
+      'mcc' = 'darkred'
+      ,'accuracy' = 'blue'
+      ,'poverty' = 'black'
+    )
+    , labels = c('Accuracy', "Matthew's Correlation Coefficient", 'Poverty Model (Training Data)')
+  ) +
+  guides(
+      color = guide_legend(
+        nrow = 2
+        , byrow = TRUE
+        , override.aes = list(
+            linetype = c("solid", "solid", "dotted")
+            , size = c(1, 1, 1.25)
+        )
+      )
+    ) +
+  ylab('Performance Metric Percent') +
+  xlab('Percent of True Observations\n(i.e., small value means rare event, large value means common event)') +
+  theme_bw() +
+  theme(
+    axis.text=element_text(size = 16)
+    , axis.title=element_text(size = 16)
+    , legend.text=element_text(size = 16)
+    , legend.title=element_text(size = 16)
+    , legend.position="bottom"
+  )
+```
+
+## Why Use Bootstrapping Statistics?
+
+The most important statistical tool for this analysis is called *bootstrapping*[^10], which is used for the following:
+
+* Estimate the range of MCC values expected to contain the "true" value 
+
+* Account for any abnormalities in the original data that may bias its MCC values
+
+|     At a high-level, bootstrapping creates a new data sample by randomly selecting from the original data with the same total observations and including the chance to repeatedly pick the same observation many times. E.g., if a data set has five observations (1, 2, 3, 4, 5), a random bootstrapped sample from this data could be (2, 2, 1, 3, 5). Another bootstrapped sample could be (4, 3, 1, 5, 2). Both samples have the same total observations (i.e., 5) and one sample has duplicate observations. 
+
+|     Bootstrapping can more informally be viewed as randomly assigning (integer) weights to each original observation. Some bootstrapped observations get more weight than others, which would be reflected in a probability model using this data. Alternatively, some observations would not be included at all.
+
+### Bootstrapped Distribution
+
+How does bootstrapping give us a range of MCC values? For each randomly generated bootstrapped sample, we can build a new probability model and use it to calculate an MCC value. 
+
+|     In the following plot, two samples are bootstrapped from the poverty training data. Each sample is used to fit a new probability model shown below as dashed lines (with the solid black line representing the modeled probability using the original data). You can see that the bootstrapped probabilities are very close to the original modeled probabilities -- but not exactly the same.
+
+```{r bootstrapDemo, fig.width = 7, fig.height = 5, fig.cap = 'Plot showing example of bootstrapped modeled probabilities'}
+model <- 'poverty'
+
+set.seed(123)
+DT.boot.demo <- logit.bootstrap(
+  DT = inputs[[model]][['DT.model.training']]
+  , iterations = 2
+  , formula = inputs[[model]][['model parameters']][, formula][[1]]
+  , DT.holdout = inputs[[model]][['DT.model.holdout']]
+  , key = 'ID'
+  , parallel = FALSE
+)
+
+appendBootDemoResults <- function(DT.model, DT.boot, label, iteration) {
+  DT.boot <- copy(DT.boot)[, Pov89_modeled.scored := modeled_probability]
+  
+  output <- DT.model[
+    DT.boot[
+      bootIteration == iteration
+      , mget(c('ID','Pov89_modeled.scored'))
+    ]
+    , on = 'ID'
+  ][, scoredData := label]
+  
+  return(output)
+}
+
+DT.plot.boot.demo <- rbindlist(list(
+  appendBootDemoResults(
+    DT.model = inputs[[model]][['DT.model.training']]
+    , DT.boot = DT.boot.demo[['modeled training']]
+    , label = 'Scored Original Data 1'
+    , iteration = 1
+  )
+  , appendBootDemoResults(
+    DT.model = inputs[[model]][['DT.model.training']]
+    , DT.boot = DT.boot.demo[['modeled training']]
+    , label = 'Scored Original Data 2'
+    , iteration = 2
+  )
+  , appendBootDemoResults(
+    DT.model = inputs[[model]][['DT.model.training']]
+    , DT.boot = DT.boot.demo[['modeled bootstrap training']]
+    , label = 'Bootstrapped Sample 1'
+    , iteration = 1
+  )
+  , appendBootDemoResults(
+    DT.model = inputs[[model]][['DT.model.training']]
+    , DT.boot = DT.boot.demo[['modeled bootstrap training']]
+    , label = 'Bootstrapped Sample 2'
+    , iteration = 2
+  )
+))
+
+(plot.training.actual + 
+  geom_line(aes(y = modeled)) + 
+  geom_line(
+    data = DT.plot.boot.demo[
+      scoredData %like% 'Boot'
+      , .(
+        counts = .N
+        , modeled = mean(Pov89_modeled.scored)
+      )
+      , by = .(
+        scoredData
+        , zAFQT89_banded = floor(zAFQT89 * 10)/10
+      )
+      ]
+    , aes(
+      x = zAFQT89_banded
+      , y = modeled
+      , color = factor(scoredData)
+    )
+    , linetype = 2
+  ) +
+  guides(color = 'none')) %>% 
+  ggplotly() %>%
+  layout(
+    legend = list(
+      orientation = "h"
+      , xanchor = "center"
+      , x = 0.5
+      , y = 0
+    )
+  )
+```
+
+|     These small variations in modeled probabilities let us generate a *distribution* of MCC values. For each set of bootstrapped probabilities, we can specify a cutoff probability (to create classifications) and then calculate a MCC value. The following table shows the MCC values for each dataset used in the latter plot. By repeating this process thousands of times, we can be more confident in the possible MCC values for a particular cutoff probability. Lastly, we can extend this by using a large range of cutoff probabilities, which can be used to find the best possible MCC value for a given TBC model.
+
+```{r bootstrapDemo_mcc}
+mcc.boot.demo <- c(
+  calculateMCC.boot(
+    DT.probabilities = inputs[[model]][['DT.model.training']]
+    , probabilityString = 'Pov89_modeled'
+    , actualString = 'Pov89'
+    , bootLabelString = ''
+    , numCutoffs = 1
+    , singleCutoff = 0.15
+  )[, mcc]
+  , calculateMCC.boot(
+    DT.probabilities = DT.boot.demo[['modeled bootstrap training']][bootIteration == 1]
+    , probabilityString = 'modeled_probability'
+    , actualString = 'actual'
+    , bootLabelString = ''
+    , numCutoffs = 1
+    , singleCutoff = 0.15
+  )[, mcc]
+  , calculateMCC.boot(
+    DT.probabilities = DT.boot.demo[['modeled bootstrap training']][bootIteration == 2]
+    , probabilityString = 'modeled_probability'
+    , actualString = 'actual'
+    , bootLabelString = ''
+    , numCutoffs = 1
+    , singleCutoff = 0.15
+  )[,mcc]
+)
+
+DT.mcc.boot.demo <- data.table(
+  Data = c(
+    'Original Poverty Training'
+    , 'Bootstrapped Sample 1'
+    , 'Bootstrapped Sample 2'
+  )
+  , MCC = mcc.boot.demo
+)
+
+kable(
+  DT.mcc.boot.demo
+  , caption = 'Bootstrapped MCC Values\n(Cutoff = 0.15)'
+  , align = c('l', 'c')
+) %>%
+  kable_styling(
+    bootstrap_options = "striped"
+    , full_width = F
+  )
+```
+
+### Bootstrapped Optimism
+
+How can bootstrapping help account for any abnormalities in the original data? By abnormality, I mean a set of observations in the original data that poorly (or even favorably) reflects the larger population. These abnormalities could bias certain statistics (e.g., MCC values) and lead to unreasonable conclusions. Bootstrapping can reduce the impact of these abnormalities by comparing statistics from:
+
+* Bootstrapped models applied to the same bootstrapped sample
+
+* Bootstrapped models applied to the original data
+
+* Models built from and applied to the original data
+
+|     A MCC value calculated from the original data may be biased due to abnormalities. In the context of TBC, e.g., there could be too many NLSY79 participants with extreme IQ values (low or high). We can account for this possibility by removing the "biased portion"" of that MCC value. This bias is called "optimism"[^11], since often the bias tends to overstate a model's performance.
+
+|     For an explicit example, the following plot shows the modeled probabilities (as dashed lines) calculated by the bootstrapped models from the prior section *but applied to the original data*. Recall that a bootstrapped model uses different weights for each observation relative to the original data. This means that the modeled probabilities in the plot give a slightly different perspective than those built from the original data. In fact, you can see that all modeled probabilities have the same spike near zAFQT89 = -2. However, the three sets of lines rarely overlap in this area.
+
+```{r bootstrapDemo_scored, fig.width = 7, fig.height = 5, fig.cap = 'Plot showing example of modeled probabilities from bootstrapped model applied to the original data'}
+(plot.training.actual + 
+  geom_line(aes(y = modeled)) + 
+  geom_line(
+    data = DT.plot.boot.demo[
+      scoredData %like% 'Score'
+      , .(
+        counts = .N
+        , modeled = mean(Pov89_modeled.scored)
+      )
+      , by = .(
+        scoredData
+        , zAFQT89_banded = floor(zAFQT89 * 10)/10
+      )
+      ]
+    , aes(
+      x = zAFQT89_banded
+      , y = modeled
+      , color = factor(scoredData)
+    )
+    , linetype = 2
+  ) +
+  guides(color = 'none')) %>%
+  ggplotly() %>%
+  layout(
+    legend = list(
+      orientation = "h"
+      , xanchor = "center"
+      , x = 0.5
+      , y = 0
+    )
+  )
+```
+
+```{r bootstrapDemo_optimism_setup}
+mcc.optimism.demo <- c(
+  calculateMCC.boot(
+    DT.probabilities = DT.boot.demo[['modeled training']][bootIteration == 1]
+    , probabilityString = 'modeled_probability'
+    , actualString = 'actual'
+    , bootLabelString = ''
+    , numCutoffs = 1
+    , singleCutoff = 0.15
+  )[, mcc]
+  , calculateMCC.boot(
+    DT.probabilities = DT.boot.demo[['modeled training']][bootIteration == 2]
+    , probabilityString = 'modeled_probability'
+    , actualString = 'actual'
+    , bootLabelString = ''
+    , numCutoffs = 1
+    , singleCutoff = 0.15
+  )[,mcc]
+)
+
+DT.mcc.optimism.demo <- data.table(
+  Data = c(
+    'Bootstrapped Sample 1'
+    , 'Bootstrapped Sample 2'
+  )
+  , `Applied to Bootstrapped Model` = mcc.boot.demo[-1]
+  , `Applied to Original Model` = mcc.optimism.demo
+  , `Difference in MCC Values` = mcc.boot.demo[-1] - mcc.optimism.demo
+)
+
+optimism.demo <- mean(mcc.boot.demo[-1] - mcc.optimism.demo)
+```
+
+|     The table below shows the MCC values calculated when applying the bootstrapped models from the prior section to the bootstrapped samples and original data. The last column gives the difference in MCC value for each row. We can calculate the bootstrapped optimism for this example by taking the average difference in MCC values (i.e., average of the 4th column below), `r paste0(floor(optimism.demo * 1e4)/1e2, '%')`.
+
+```{r bootstrapDemo_optimism}
+kable(
+  DT.mcc.optimism.demo
+  , caption = 'Bootstrapped Optimism for MCC (Cutoff = 0.15)'
+  , align = c('l', rep('c', 3))
+) %>%
+  kable_styling(
+    bootstrap_options = "striped"
+    , full_width = F
+  ) %>%
+  add_header_above(c(' ' = 1, 'MCC' = 2, ' ' = 1)) %>%
+  row_spec(2, hline_after = TRUE)
+```
+
+|     Returning to our original goal in this section, we remove the biased portion of MCC calculated from the original data set (which is referred to as the "apparent value" to distinguish from the different types of bootstrapped values) by subtracting the optimism estimate. We call this the "optimism-corrected MCC value", which is used later in this report. As noted in the prior section, the optimism routine here would be repeated thousands of times in order to have a more reliable MCC estimate.
+
+```{r note, echo=FALSE, eval=FALSE, include=FALSE}
+# I'm hardcoding the values below because I can't get LaTeX equations to work with R code chunks...
+# It's gross, I know :/
+# So long as the set.seed is used before DT.boot.demo, the values below should be consistent.
+```
+
+$$
+\begin{aligned}
+  \text{Optimism-corrected MCC Value} &= \text{Apparent MCC Value} - \text{Optimism Estimate} \\
+  &= 0.22286 - 0.01847 \\
+  &= 0.20438 \\
+\end{aligned}
+$$
+
+# Data{#data}
 
 Since reproducing TBC's models is a goal for this project, I want the exact data used by the authors. With the NLSY79 being a public dataset, this is possible. However, the NLSY79 uses a special variable coding system which was not noted in TBC.  To credit the authors, they did release their modified datasets online and included a data dictionary[^10]. In order to reproduce TBC's results as closely as possible, I opted to use the authors’ data (i.e., "Nation.txt")
 
@@ -218,67 +860,93 @@ For a given TBC model to reproduce, the training data is based on the cross-sect
 
 ## Data and Model Specifications
 
-Also needed for reproduction are the exact data and model specifications. The authors listed parameter and diagnostic output for each model in appendix 4 of TBC. I used these to experiment with the "Nation.txt"" dataset in order to reproduce TBC's models as closely as possible. 23 of the 24 reproduced models agreed with the book's listed parameter values up to 4 decimal places or more. The last model reproduced the parameter values to a similar precision but the model's included categorical had different values. I suspect these differences come from the authors' use of an older version of STATA, and myself using R. Perhaps the two modeling implementations handle categorical levels differently in the design matrix, causing different parameter values. 
+Also needed for reproduction are the exact model specifications. The authors listed parameter and diagnostic output for each model in appendix 4 of TBC. I used these to experiment with the "Nation.txt"" dataset in order to reproduce TBC's models as closely as possible. 23 of the 24 reproduced models agreed with the book's listed parameter values up to 4 decimal places or more. The 24th model reproduced the parameter values to a similar precision but the model's categorical variable had different values. I suspect these differences come from the authors' use of an older version of STATA, and myself using R. (Perhaps the two modeling implementations handle categorical levels differently in the design matrix, causing different parameter values.)
 
-Below I list the shorthand names I give for each TBC model with their corresponding binary target:
+Below I list the names I give for each TBC model including their:
+
+* General category (used later to group the models)
+* Description of the binary target (mostly taken from TBC)
+* Number of NLSY79 Participants for each data partition
+* Frequency of Binary Target for each data partition
 
 ```{r tbc.models_targets}
-setwd("B:/DATA 512/Final Project")
-source('200 Code/000_Misc.R')
-source('200 Code/400_Model_Definitions.R')
-library(knitr)
-
-kable(tbc.models[, .(label, target.description)])
-```
-
-Next I list the training data specifications used for this project (where the holdout data has the same definition but with Sample == 'Supplement'):
-  
-```{r tbc.models_subsets}
 ## Note: The following variables are not present in Nation.txt. I created these to facilitate reproducing TBC's models. See TBC_Bootstrap for details.
-# NOTRUN
+# DONT RUN
 #   GEDvHSGr_Ind = ifelse(GEDvHSGr == 'GED', 1, 0)
 #   LTHSvHS_Ind = ifelse(LTHSvHS == 'LTHS', 1, 0)
 #   WedBy30_Ind = ifelse(WedBy30 == '1 Yes', 1, 0)
-# NOTRUN
+# DONT RUN
 
-kable(tbc.models[, .(label, filter.training)])
+kable(
+  outputs[tbc.models[, .(label, labelAppendix)], on = 'label'][
+    , .(
+      `Model` = labelAppendix
+      , Category = category
+      , `Description of Binary Target` = target.description
+      , `(Training)` = nobs.training
+      , `(Holdout)` = nobs.holdout
+      , `(Training)` = floor(response.mean.training * 1e3)/1e3
+      , `(Holdout)` = floor(response.mean.holdout * 1e3)/1e3
+    )
+  ]
+  , caption = 'Table of TBC model properties'
+  , align = c('l', 'c', 'l', rep('c', 4))
+) %>%
+  kable_styling(
+    bootstrap_options = "striped"
+    , full_width = F
+  ) %>%
+  add_header_above(c(' ' = 3, 'NLSY79 Participants' = 2, 'Frequency of Binary Target' = 2))
 ```
-  
-Lastly, I list the model specifications used for this project:
 
-```{r tbc.models_formulae}
-kable(tbc.models[, .(label, formula)])
+# Methods{#methods}
+
+The statistical methods of this report are described in the figure below. Since this procedure is non-trivial, I simplify it as the following: 
+
+For 10,000 bootstrap iterations and each TBC model:
+
+1. Define two bootstrap samples:
+    
+    * Bootstrapped training data
+    
+    * Bootstrapped holdout data
+
+2. Build a bootstraped probability model using training data
+
+3. With this model, score the:
+    
+    * Bootstrapped training sample
+    
+    * Bootstrapped holdout sample
+    
+    * Original training sample
+    
+    * Original holdout sample
+
+4. For each scored data set, build 500 classifications using cutoff probabilities in a linear grid across (0, 1)
+
+5. For each classifier, calculate Matthew's Correlation Coefficient
+
+6. For each cutoff value, calculate: 
+    
+    * The optimism for MCC
+    
+    * Bias-corrected accelerated (BCa) 95% confidence intervals for training data
+    
+    * Bootstrapped percentile 95% confidence intervals for holdout data
+
+7. Lastly, for each model, find the cutoff value with the largest mean bootstrapped MCC value, i.e., the "optimal cutoff".
+
+__Note__: MCC data related to the holdout sample use bootstrapped percentile confidence intervals because the fitted probability models were based on training data. Hence, BCa intervals aren't meaningful for MCC holdout data.
+
+```{r algorithm, out.width = '60%', fig.pos = 'H', fig.cap = 'Procedure used to produce distributions of MCC values with optimism correction'}
+# For LaTeX code used to generate this png, see '200 Code/Bootstrap Validation Algorithm.tex'
+knitr::include_graphics(file.path(code.folder, 'Bootstrap Validation Algorithm.png'))
 ```
-
-# Methods
-
-Below I give more detail on how the MCC predictive evaluation is performed:
-
-1. Specify a training dataset and formula consistent with a TBC model.
-
-2. Fit 10,000 logistic regression models via bootstrapping (i.e., resampling the observed joint distribution with equal sizes)
-
-3. Apply each bootstrapped model to the training data.
-
-4. Map the modeled probabilities to a classification by selecting a cutoff value
-
-5. Build a confusion matrix with the modeled classifications and actual target data.
-
-6. Calculate various performance metrics for a binary target, in particular, MCC.
-
-7. Repeat steps 4 - 6 for a large range of possible cutoff values (i.e., a linear grid of length 500 between 0 and 1).
-
-8. Inspect the distribution of MCC across all cutoff values to find the maximum MCC value.
-
-9. With the IQ factor on the x-axis, plot the average observed target and bootstrapped classifications for a set of cutoff values (including that which maximizes MCC). Use the plot to build intuition on the maximum MCC value.
-
-10. Repeat all prior steps for each of the 24 training datasets and formulae.
-
-11. Summarize the maximum MCC values across all reproduced TBC models and by training and holdout data.
 
 These steps are implemented in R using the following scripts within this repository:
 
-* *000_Misc.R*: Attaches needed packages and defines a convenience function to report timing
+* *000_Misc.R*: Attaches needed packages and defines a convenience functions
 
 * *100_Resampling.R*: Custom functions to perform resampling techniques via bootstrapping and the jackknife method
 
@@ -290,189 +958,273 @@ These steps are implemented in R using the following scripts within this reposit
 
 * *TBC_Bootstrap.R*: Recursive code that executes a batch run for each TBC probability model. **This script is the workhorse of the entire project**. See its code for details.
 
-**Note**: When 10,000 bootstrap iterations are used on all 24 models in the prior script, the entire recursive batch process:
+**Note**: When 10,000 bootstrap iterations are used on all 24 models in the prior script (with parallel computing), the entire recursive batch process:
 
-- Produces 941 files in the "100 Data" folder, 6.76 GBs in total
+- Produces 193 files in the "100 Data" folder, 6.56 MBs in total
 - Takes 4 - 5 hours
 
-# Results
+# Results{#results}
 
-In this section, I present two types of results. First, I walkthrough output from the poverty model. Output from the remaining models is displayed in the appendix. Second, I summarize the optimal MCC values as evaluated on the training and holdout datasets for each model. 
+In this section, I present two types of results. First, I walkthrough output from the poverty model. The discussion here is intended to help readers understand all the model output displayed in the [appendix](#appendixResults) (if that detail is desired). Second, I summarize the optimal MCC values as evaluated on the training and holdout datasets for each model. 
 
-## Walkthrough of Poverty Model
+## Walkthrough of Poverty Model{#povertyWalkthrough}
 
-Before describing output from the poverty model, I import all the saved plot images and other objects from the batch run (executed by "TBC_Bootstrap.R").
+### Model Parameters
 
-```{r povertyModel_setup}
-library(cowplot)
-# Note: To import svg images, cowplot requires the magick package but only states so when trying to import them
+Since reproducibility is critical for this project, I display the model parameters associated with the original, non-bootstrapped poverty model. These values should correspond to the ones listed on P. 620 of TBC. (See the appendix on [reproducing TBC models](#reproducible) for details.)
 
-# Load data
-save.folder <- '100 Data'
-
-# Create more simpler version of model labels
-model.labels <- tbc.models$label
-
-# Get filenames of all data saved from the bootstrap analysis
-filenames <- list.files(save.folder)
-
-# For bootstrap plots and output files, create named lists via model labels that stores the relevant filenames
-#   E.g., 
-#   names(filenames.plots)[1] = 'poverty'
-#   names(filenames.plots)[24] = 'middle_class_values.col'
-filenames.plots <- vector(mode="list", length = length(model.labels))
-names(filenames.plots) <- model.labels
-
-# For each model label, store relevant filenames for either the bootstrap plots or output files
-for(label in model.labels) {
-  filenames.plots[[label]] <- grep(pattern = paste0('^',label,'_plot'), x = filenames, perl = TRUE, value = TRUE)
-}
-
-# For bootstrap plots and output files, create named lists via model labels that stores the relevant R objects
-# Within each list index of plots, create named list to denote each type of R object for easier access in the report
-#   E.g.,
-#   names(plots)[1] = 'poverty'
-#   names(plots[[1]])[1] <- plots.a2e
-plot.type <- c(
-  'plots.a2e_zAFQT89'
-  ,'plots.a2e_zAge'
-  ,'plots.a2e_zSES'
-  ,'plots.hist.cutoffs.training_cutoff.2stdev'
-  ,'plots.hist.cutoffs.training_cutoff.roc'
-  ,'plots.hist.cutoffs.training_cutoff.mcc'
-  ,'plots.hist.cutoffs.holdout_cutoff.2stdev'
-  ,'plots.hist.cutoffs.holdout_cutoff.roc'
-  ,'plots.hist.cutoffs.holdout_cutoff.mcc'
-  ,'plots.class.cutoffs.training_cutoff.2stdev'
-  ,'plots.class.cutoffs.training_cutoff.roc'
-  ,'plots.class.cutoffs.training_cutoff.mcc'
-  ,'plots.class.cutoffs.holdout_cutoff.2stdev'
-  ,'plots.class.cutoffs.holdout_cutoff.roc'
-  ,'plots.class.cutoffs.holdout_cutoff.mcc'
-  ,'plots.classFormat.mcc.training_plot.a2e'
-  ,'plots.classFormat.mcc.training_plot.volume'
-  ,'plots.classFormat.training_plot.a2e'
-  ,'plots.classFormat.training_plot.volume'
-  ,'plots.classFormat.mcc.holdout_plot.a2e'
-  ,'plots.classFormat.mcc.holdout_plot.volume'
-  ,'plots.classFormat.holdout_plot.a2e'
-  ,'plots.classFormat.holdout_plot.volume'
-  ,'plot.dist.mcc.training'
-  ,'plot.dist.mcc.holdout'
-  ,'plot.roc.training'
-  ,'plot.roc.holdout'
-  ,'plot.dist.mcc.training.bootCI'
-  ,'plot.dist.mcc.holdout.bootCI'
+```{r modelParameters, results = 'asis', header = FALSE}
+model <- 'poverty'
+title.model <- paste0(
+  'Reproduced TBC Probability Model: '
+  , tbc.models[label == model, labelAppendix]
 )
-plots <- vector(mode="list", length = length(model.labels))
-names(plots) <- model.labels
+target.model <- tbc.models[label == model, response]
 
-# Import each saved SVG file and store it as a named element within the plots list
-for(label in model.labels) {
-  plots[[label]] <- vector(mode="list", length = length(plot.type))
-  names(plots[[label]]) <- plot.type
-  for(type in plot.type) {
-    filename.plot.type <- paste0(save.folder,'/',label,'_',type,'.svg')
-    plots[[label]][[type]] <- cowplot::ggdraw() + cowplot::draw_image(magick::image_read_svg(filename.plot.type, width = 3000))
-  }
-}
-
-# Import the outputs list for the poverty model
-output.poverty <- data.table(t(readRDS('100 Data/poverty_outputs.rds')))
-```
-
-Since reproducibility is critical for this project, I display the model parameters associated with the original, non-bootstrapped poverty model. These values should correspond to the ones listed on P. 620 of TBC. (The reference TBC page for each model is in the tbc.models$appendix.page field as described in the "400_Model_Definitions.R" script)
-
-```{r modelParameters}
-summary(output.poverty[1L, glm.model][[1]])
-```
-
-The 3 plots below show the average of the poverty target and the modeled probabilities without bootstrapping across a banded version of the 3 main variables: zAFQT89, zSES, and zAge. Both zAFQT89 and zSES tend to have a monotonically decreasing relationship with the poverty target. The plot with zAFQT89 is the least noisy of the 3 and that of zAge is the most noisy. By inspection, these plots show that zAFQT89 and zSES influence the target, but do not capture a significant amount of variance in the data.
-
-**Note**: I am having plotting issues in this version of the report, as shown by the excessive whitespace around plots from imported SVG files.
-
-```{r poverty_plota2e, out.width = '4000px', fig.show = 'hold'}
-plots[['poverty']][['plots.a2e_zAFQT89']]
-plots[['poverty']][['plots.a2e_zSES']]
-plots[['poverty']][['plots.a2e_zAge']]
-```
-
-The 2 plots below show the bootstrapped distributions of MCC values across a dense grid of cutoff values. The first plot is the MCC distribution when evaluated on the training data, the second is that using the holdout data. The optimal MCC value is displayed above each plot.
-
-The solid orange line represents the original sample MCC values for each cutoff. The shaded region around this line is the accelerated, bias-corrected 95% percentile intervals for the sample MCC values. The dotted orange line represents the average bootstrapped MCC value by cutoff. The blue hexagonal tiles represent a density plot of bootstrapped MCC values for that local region. Higher density tiles have a lighter color of blue.
-```{r poverty_bootCI, out.width = '4000px', fig.show = 'hold'}
-cat(paste0('The optimal MCC value using training data = ',output.poverty[1L, mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',output.poverty[1L, cutoffs][[1]]['cutoff.mcc']))
-plots[['poverty']][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',output.poverty[1L, mcc.optimal.holdout][[1]]))
-plots[['poverty']][['plot.dist.mcc.holdout.bootCI']]
-```
-
-The 2 plots below show the averages of the poverty target, modeled probabilities, and the classifications using the cutoff value associated with the optimal MCC value from the training data vs a banded version of zAFQT89. The first plot shows results using the training data, the second is that using the holdout data. Overall, the average classifications poorly reflect the observed values for both datasets, which is consistent with optimal MCC values below 35%.
-```{r poverty_classificationavg, out.width = '4000px', fig.show = 'hold'}
-plots[['poverty']][['plots.classFormat.mcc.training_plot.a2e']]
-plots[['poverty']][['plots.classFormat.mcc.holdout_plot.a2e']]
-```
-
-## Comparison of Optimal MCC Values
-
-The main output of this project is the following plot, which compares the optimal MCC values between the training and holdout datasets for each model. The x-axis represents the optimal MCC values as evaluated on the training data, the y-axis is that evaluated on the holdout data. To simplify the plot, the models are grouped together by category. With the exception of a few education-related TBC models, all other TBC models have optimal MCC values below 50% for either training or holdout data.
-```{r compareMCC, fig.width = 12, fig.height = 8}
-# Import all outputs
-library(RColorBrewer)
-
-save.folder <- '100 Data'
-
-model.labels <- tbc.models$label
-filenames.output <- paste0(save.folder, '/', model.labels, '_outputs.rds')
-outputs <- rbindlist(lapply(seq_along(filenames.output), function(x) data.table(t(readRDS(filenames.output[x])))))
-outputs[, label := model.labels]
-
-categories <- c(
-  'Poverty'
-  ,'Poverty'
-  ,'Education'
-  ,'Education'
-  ,'Education'
-  ,'Education'
-  ,'Employment'
-  ,'Employment'
-  ,'Employment'
-  ,'Employment'
-  ,'Employment'
-  ,'Employment'
-  ,'Marriage'
-  ,'Marriage'
-  ,'Marriage'
-  ,'Marriage'
-  ,'Marriage'
-  ,'Marriage'
-  ,'Marriage'
-  ,'Crime'
-  ,'Crime'
-  ,shQuote('Middle Class Values')
-  ,shQuote('Middle Class Values')
-  ,shQuote('Middle Class Values')
+stargazer(
+  outputs[label == model, glm.model][[1]]
+  , type = 'html'
+  , title = title.model
+  , dep.var.labels = target.model
+  , digits = 5
 )
+```
 
-# Create category field
-outputs[, Category := factor(categories, levels = unique(categories))]
+### Plotting Modeled Probabilities{.tabset .tabset-fade}
 
-# Ensure MCC fields are numeric
-outputs[, mcc.optimal.training := as.numeric(mcc.optimal.training)]
-outputs[, mcc.optimal.holdout := as.numeric(mcc.optimal.holdout)]
+The three plots below show the average of the poverty target and the modeled probabilities across a banded version of the three main variables: zAFQT89, zSES, and zAge. 
 
-# Plot
+|     The black data points represent averages of the poverty target for NLSY79 participants (i.e,. observed data). The blue line represents the averaged modeled probabilities calculated from the original training data. The light blue ribbon represents 95% (BCa) confidence intervals for the modeled probability. The bar chart above the main plot reflects the proportion of NLSY79 participants included for each bucket of the x-axis. (This helps indicate which buckets have more or less weight.)
+
+|     Both zAFQT89 and zSES tend to have a monotonically decreasing relationship with the poverty target. The plot with zAFQT89 is the least noisy of the 3 and that of zAge is the most noisy. By inspection, the modeled probability lines show that zAFQT89 and zSES influence the poverty target, but do not capture a significant amount of variance in the data. This is also represented by the 95% confidence intervals for zAFQT89, since some data points (even some with large weights, according to the bar chart) lie outside the intervals.
+
+#### zAFQT89
+
+```{r poverty_plota2e_zAFQT89, fig.show = 'hold', fig.cap = 'Plot of observed and bootstrapped modeled probabilities across zAFQT89 for Poverty model (Training Data)'}
+model <- 'poverty'
+factorSelection <- 'zAFQT89'
+
+plotFrequencyVsProbability.bootCI(
+     DT.factors = inputs[[model]][['DT.model.training']]
+    , DT.bootCI = DTs.probability.bootCI.training[[model]][[factorSelection]]
+    , xString = factorSelection
+    , yString = inputs[[model]][['model parameters']][, response]
+    , key = 'ID'
+    , bandingPrecision = 10
+    , alpha = 0.05
+    , response.label = inputs[[model]][['model parameters']][, target.descriptions.formatted]
+)
+```
+
+#### zSES
+
+```{r poverty_plota2e_zSES, fig.show = 'hold', fig.cap = 'Plot of observed and bootstrapped modeled probabilities across zSES for Poverty model (Training Data)'}
+model <- 'poverty'
+factorSelection <- 'zSES'
+
+plotFrequencyVsProbability.bootCI(
+     DT.factors = inputs[[model]][['DT.model.training']]
+     , DT.bootCI = DTs.probability.bootCI.training[[model]][[factorSelection]]
+    , xString = factorSelection
+    , yString = inputs[[model]][['model parameters']][, response]
+    , key = 'ID'
+    , bandingPrecision = 10
+    , alpha = 0.05
+    , response.label = inputs[[model]][['model parameters']][, target.descriptions.formatted]
+)
+```
+
+#### zAge
+
+```{r poverty_plota2e_zAge, fig.show = 'hold', fig.cap = 'Plot of observed and bootstrapped modeled probabilities across zAge for Poverty model (Training Data)'}
+model <- 'poverty'
+factorSelection <- 'zAge'
+
+plotFrequencyVsProbability.bootCI(
+     DT.factors = inputs[[model]][['DT.model.training']]
+     , DT.bootCI = DTs.probability.bootCI.training[[model]][[factorSelection]]
+    , xString = factorSelection
+    , yString = inputs[[model]][['model parameters']][, response]
+    , key = 'ID'
+    , bandingPrecision = 10
+    , alpha = 0.05
+    , response.label = inputs[[model]][['model parameters']][, target.descriptions.formatted]
+)
+```
+
+### Plotting MCC Distributions{.tabset .tabset-fade}
+
+The two plots below show the bootstrapped distributions of MCC values across a dense grid of cutoff values. The first plot is the MCC distribution when evaluated on the training data, the second is that using the holdout data. 
+
+|     The solid blue line represents the MCC values calculated from the original data (hence its large noise). The dashed blue line represents the mean bootstrapped MCC values. The light blue ribbon represents the 95% confidence intervals for MCC values. The bar chart above the main plot represents the proportion of non-NULL MCC values calculated for that cutoff value. (MCC is undefined when its denominator is 0, which can happen when there are no true positive classifications). Lastly, the black vertical dashed line identifies the optimal cutoff probability within that dataset. The adjacent table shows the optimal cutoff probabilities and MCC values (split by the mean bootstrapped value, apparent value from the original data, and optimism-corrected value), including their 95% confidence intervals.
+
+```{r poverty_bootCI_table, fig.show = 'hold'}
+model <- 'poverty'
+
+kable(
+  data.table(
+    Dataset = c('Training', 'Holdout')
+    , `Cutoff Probability` = c(
+      outputs[label == (model), cutoff.mcc.training][[1]]
+      , outputs[label == (model), cutoff.mcc.holdout][[1]]
+    )
+    , `Lower Bound` = c(
+      outputs[label == (model), mcc.bootstrap.lower.BCa.training][[1]]
+      , outputs[label == (model), mcc.bootstrap.lower.bootPercentile.holdout][[1]]
+    )
+    , `Apparent` = c(
+      outputs[label == (model), mcc.apparent.training][[1]]
+      , outputs[label == (model), mcc.apparent.holdout][[1]]
+    )
+    , `Bootstrapped Mean` = c(
+      outputs[label == (model), mcc.bootstrap.training][[1]]
+      , outputs[label == (model), mcc.bootstrap.holdout][[1]]
+    )
+    , `Optimism Corrected` = c(
+      outputs[label == (model), mcc.optimism.corrected.training][[1]]
+      , outputs[label == (model), mcc.optimism.corrected.holdout][[1]]
+    )
+    , `Upper Bound` = c(
+      outputs[label == (model), mcc.bootstrap.upper.BCa.training][[1]]
+      , outputs[label == (model), mcc.bootstrap.upper.bootPercentile.holdout][[1]]
+    )
+  )
+  , align = rep('c', 7)
+  , caption = 'Table of optimal MCC values with bootstrapped confidence intervals'
+) %>% 
+  kable_styling(bootstrap_options = "striped", full_width = F) %>%
+  add_header_above(c(' ' = 3, 'Optimal MCC' = 3, ' ' = 1))
+```
+
+#### Training Data
+
+```{r poverty_bootCI_mccTraining, fig.show = 'hold', fig.cap = 'Plot of bootstrapped MCC distributions by cutoff (Training Data)'}
+model <- 'poverty'
+
+plotPerformanceMetric.cutoff.bootCI(
+  DT.bootCI = DT.mcc.bootCI.training[label == model]
+  , performanceMetric = 'mcc'
+  , performanceMetric.boot = 'mcc.bootstrap'
+  , cutoff.name = 'cutoff'
+  , lowerCI.name = 'lower'
+  , upperCI.name = 'upper'
+)
+```
+
+#### Holdout Data
+
+```{r poverty_bootCI_mccHoldout, fig.show = 'hold', fig.cap = 'Plot of bootstrapped MCC distributions by cutoff (Holdout Data)'}
+model <- 'poverty'
+
+plotPerformanceMetric.cutoff.bootCI(
+  DT.bootCI = DT.mcc.bootCI.holdout[label == model]
+  , performanceMetric = 'mcc'
+  , performanceMetric.boot = 'mcc.bootstrap'
+  , cutoff.name = 'cutoff'
+  , lowerCI.name = 'lower'
+  , upperCI.name = 'upper'
+)
+```
+
+### Plotting Modeled Classifications{.tabset .tabset-fade}
+
+The two plots below show the averages of the poverty target, modeled probabilities, and the classifications using the cutoff value associated with the optimal MCC value from the training data vs a banded version of zAFQT89. The first plot shows results using the training data, the second is that using the holdout data.
+
+|     The black data points represent averages of the poverty target for NLSY79 participants (same as before). The blue line represents the averaged modeled classifications calculated from the original data (and using the optimal cutoff of `r paste0(floor(outputs[label == model, cutoff.mcc.training] * 1e4) / 1e2, '%')`). The light blue ribbon represents 95% confidence intervals for the modeled classifications. The grey line represents the averaged modeled probabilities calculated from the original data. The light grey ribbon represents 95% confidence intervals for the modeled probability. The bar chart above the main plot reflects the proportion of NLSY79 participants included for each bucket of the x-axis (same as before).
+
+|     Overall, the average classifications poorly reflect the observed values for both datasets, which is consistent with their optimal MCC values below 35%. If the model performed very well, the two confidence intervals would have larger overlapping regions across the zAFQT89 buckets. For these two plots, the confidence intervals rapidly deviate from each other for zAFQT89 values below -1.
+
+#### Training Data
+
+```{r poverty_classificationavg_training, fig.show = 'hold', fig.cap = 'Plot comparing bootstrapped classifications and modeled probabilities for Poverty model (Training Data)'}
+plotFrequencyVsClassification.bootCI(
+    DT.factors = inputs[['poverty']][['DT.model.training']]
+    , DT.classification.bootCI = DTs.mcc.classification.bootCI.training[['poverty']][['zAFQT89']]
+    , DT.probabilities.bootCI = DTs.probability.bootCI.training[['poverty']][['zAFQT89']]
+    , xString = 'zAFQT89'
+    , yString = outputs[label == 'poverty', response]
+    , cutoff = outputs[label == 'poverty', cutoff.mcc.training]
+    , key = 'ID'
+    , bandingPrecision = 10
+    , alpha = 0.05
+    , response.label = outputs[label == 'poverty', target.descriptions.formatted]
+)
+```
+
+#### Holdout Data
+
+```{r poverty_classificationavg_holdout, fig.show = 'hold', fig.cap = 'Comparing bootstrapped classifications and modeled probabilities for Poverty model (Holdout Data)'}
+plotFrequencyVsClassification.bootCI(
+    DT.factors = inputs[['poverty']][['DT.model.holdout']]
+    , DT.classification.bootCI = DTs.mcc.classification.bootCI.holdout[['poverty']][['zAFQT89']]
+    , DT.probabilities.bootCI = DTs.probability.bootCI.holdout[['poverty']][['zAFQT89']]
+    , xString = 'zAFQT89'
+    , yString = outputs[label == 'poverty', response]
+    , cutoff = outputs[label == 'poverty', cutoff.mcc.training]
+    , key = 'ID'
+    , bandingPrecision = 10
+    , alpha = 0.05
+    , response.label = outputs[label == 'poverty', target.descriptions.formatted]
+)
+```
+
+## Comparison of Optimal MCC Values{#optimalMCC .tabset .tabset-fade}
+
+The main output of this project are the following two plots, which compare the optimal MCC values between the training and holdout datasets for each model. The first plot includes models where the average bootstrapped p-value for zAFQT89 is under 5% (i.e., models where IQ tend to be statistically significant); and for the second plot, models with that average p-value above 5% (i.e., models where IQ tended to not be statistically significant). For each model, 95% confidence intervals are shown for both training and holdout data.
+
+__Note__: *I'm not aware of statisticians averaging bootstrapped p-values of individual coefficients. Averaging p-values is only used here to group models according to their overall noise. As shown in the plots, models with this average p-value above 5% tend to have very large 95% confidence intervals -- so large that they clutter the combined plot!*
+
+|     The x-axis represents the optimal MCC values as evaluated on the training data, the y-axis is that evaluated on the holdout data. To simplify the plot, the models are grouped together by category. With the exception of a few education-related TBC models, all other TBC models have optimal MCC values below 50% for either training or holdout data.
+
+### Statistically Significant zAFQT89 (5% level)
+```{r compareMCC_zAFQT_significant, fig.width = 12, fig.height = 8, fig.cap = 'Comparing predictive power of TBC models via optimism corrected MCC values'}
 ggplot(
-  outputs[, .(mcc.optimal.training, mcc.optimal.holdout, Category)]
-  , aes(x = mcc.optimal.training, y = mcc.optimal.holdout, group = Category, color = Category, shape = Category)
+  outputs[
+    , .(
+      label
+      , mcc.optimism.corrected.training
+      , mcc.bootstrap.lower.BCa.training
+      , mcc.bootstrap.upper.BCa.training
+      , mcc.optimism.corrected.holdout
+      , mcc.bootstrap.lower.bootPercentile.holdout
+      , mcc.bootstrap.upper.bootPercentile.holdout
+      , Category = category
+    )
+  ][
+    # Only plot models where the p-value for zAFQT89 is less than 0.05
+    # THe other models should be plotted, but their BCa intervals don't contain the sample MCC value. 
+    # Their larger p-values indicates a very weak model
+    label %in% DT.coef.pValue[zAFQT89 <= 0.05]$label
+  ]
+  , aes(
+    x = mcc.optimism.corrected.training
+    , y = mcc.optimism.corrected.holdout
+    , group = Category
+    , color = Category
+    , shape = Category
+  )
 ) + 
-  geom_point(size = 4) + 
+  geom_point(size = 4, stroke = 1.5) + 
+  geom_errorbar(
+    aes(
+      ymin = mcc.bootstrap.lower.bootPercentile.holdout
+      , ymax = mcc.bootstrap.upper.bootPercentile.holdout
+    )
+    , color = 'black'
+    , alpha = 0.5
+  ) +
+  geom_errorbarh(
+    aes(
+      xmin = mcc.bootstrap.lower.BCa.training
+      , xmax = mcc.bootstrap.upper.BCa.training
+    )
+    , color = 'black'
+    , alpha = 0.35
+  ) +
   scale_color_brewer(palette = "Dark2") +
   xlab('Optimal MCC Value (Training Data)') + 
   ylab('Optimal MCC Value (Holdout Data)') + 
-  lims(x = c(0,1), y = c(0,1)) + 
+  lims(x = c(-0.2,1), y = c(-0.2,1)) + 
   theme_bw() + 
   theme(
     axis.text=element_text(size=16)
@@ -480,504 +1232,289 @@ ggplot(
     , legend.text=element_text(size=16)
     , legend.title=element_text(size=16)
   )
-
 ```
 
-# Discussion
-
-What does the plot comparing optimal MCC values mean? Using the guidelines for interpreting MCC values listed above, nearly all TBC models have a low correlation (i.e., below 50%) between their observed binary target and the bootstrapped classification when evaluated on either training or holdout data. This suggests TBC's probability models are not materially predictive and so they inadequately support the authors' public policy recommendations.
-
-The only TBC models with optimal MCC values above 50% are those with binary targets related to education: receiving a GED, receiving a Bachelor's, or dropping out of school. Again using the above guidelines for interpreting MCC values, the optimal MCC values for these models are "moderate." While these models are relatively more predictive than the other TBC models, they alone do not warrant the authors' recommendations.
-
-# Appendix: Model Output
-**Note:** These really should be generated by a simple function, but I've run out of time...
-
-## Poverty - Highschool
-
-```{r appendix_model2, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'poverty.hs'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
+### Not Statistically Significant zAFQT89 (5% level) 
+```{r compareMCC_zAFQT_insignificant, fig.width = 12, fig.height = 8, fig.cap = 'Comparing predictive power of TBC models via optimism corrected MCC values'}
+ggplot(
+  outputs[
+    , .(
+      label
+      , mcc.optimism.corrected.training
+      , mcc.bootstrap.lower.BCa.training
+      , mcc.bootstrap.upper.BCa.training
+      , mcc.optimism.corrected.holdout
+      , mcc.bootstrap.lower.bootPercentile.holdout
+      , mcc.bootstrap.upper.bootPercentile.holdout
+      , Category = category
+    )
+  ][
+    label %in% DT.coef.pValue[zAFQT89 > 0.05]$label
+  ]
+  , aes(
+    x = mcc.optimism.corrected.training
+    , y = mcc.optimism.corrected.holdout
+    , group = Category
+    , color = Category
+    , shape = Category
+  )
+) + 
+  geom_point(size = 4, stroke = 1.5) + 
+  geom_errorbar(
+    aes(
+      ymin = mcc.bootstrap.lower.bootPercentile.holdout
+      , ymax = mcc.bootstrap.upper.bootPercentile.holdout
+    )
+    , color = 'black'
+    , alpha = 0.5
+  ) +
+  geom_errorbarh(
+    aes(
+      xmin = mcc.bootstrap.lower.BCa.training
+      , xmax = mcc.bootstrap.upper.BCa.training
+    )
+    , color = 'black'
+    , alpha = 0.35
+  ) +
+  scale_color_brewer(palette = "Dark2") +
+  xlab('Optimal MCC Value (Training Data)') + 
+  ylab('Optimal MCC Value (Holdout Data)') + 
+  lims(x = c(-0.35,1), y = c(-0.35,1)) + 
+  theme_bw() + 
+  theme(
+    axis.text=element_text(size=16)
+    , axis.title=element_text(size=16)
+    , legend.text=element_text(size=16)
+    , legend.title=element_text(size=16)
+  )
 ```
 
-## Dropout
+# Discussion{#discussion}
 
-```{r appendix_model3, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'dropout'
-summary(outputs[label == (model), glm.model][[1]])
+What does the plot comparing optimal MCC values mean? Using the [guidelines for interpreting MCC values](#mcc) listed above, nearly all TBC models have a low correlation (i.e., below 50%) between their observed binary target and the bootstrapped classification when evaluated on either training or holdout data. **This suggests TBC's probability models are not materially predictive and so they inadequately support the authors' public policy recommendations.**
 
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
+|     The only TBC models with optimal MCC values near 50% are those with binary targets related to education: receiving a GED, receiving a Bachelor's, or dropping out of school. Although I am not a social psychologist, these results seem plausible, i.e., having lower IQ has a stronger association with having academic issues. Again using the above guidelines for interpreting MCC values, the optimal MCC values for these models are "moderate." While these models are relatively more predictive than the other TBC models, they alone do not warrant the authors' recommendations.
 
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
+# Informal Notes
 
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
+1. Much more can be said about these models, but that would lengthen this already long report!
 
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
+2. Future work could involve the remaining ~12 TBC models, but I don't expect to have time to do so.
+
+3. I'm aware bootstrap percentile confidence intervals may not be reliable. However, I've included them for holdout data as a soft comparison with the results from the training data.
+
+4. The TBC_Bootstrap procedure technically doesn't set a random seed for the boot package validation work. In a future version, I could do this and rerun the procedure. However, I don't think it would change any conclusions of this report.
+
+5. I chose 10,000 bootstrap iterations *because* it seemed excessive. Prelim work with the poverty model (not included here) suggested that even 5,000 iterations was adequate. I wanted this large enough that a reader wouldn't discredit the conclusions for having too few bootstrap iterations.
+
+# Appendix
+
+## Details on Reproducing TBC Models{#reproducible}
+
+The 24 TBC models can be reproduced in R with the following formulae and subset definitions for the training data. (The holdout data has the same subset definition per model but with *Sample == 'Supplement'*.) These reproductions can be confirmed by comparing the regression tables in the [Model Output](#appendixResults) section of this paper with the diagnostic data shown on TBC appendix pages cited below.
+
+```{r reproducingTBCModels, fig.cap = 'Details on reproducing TBC models for this analysis'}
+kable(
+  outputs[tbc.models[, .(label, labelAppendix)], on = 'label'][
+    , .(
+      `Model` = labelAppendix
+      , `R Code to Specify Subset of Training Data` = filter.training
+      , `Model Formula` = formula
+      , `TBC Appendix Page for Same Model` = appendix.page
+    )
+  ]
+  , align = c(rep('l', 3), 'c')
+) %>% kable_styling(
+  bootstrap_options = "striped"
+  , full_width = F
+)
 ```
 
-## Dropout - Interaction
+## Table of Optimal MCC Values {.tabset .tabset-fade}
 
-```{r appendix_model4, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'dropout_interaction'
-summary(outputs[label == (model), glm.model][[1]])
+### Training Data
 
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
+```{r compareMCC_table_training}
+kable(
+  outputs[tbc.models[, .(label, labelAppendix)], on = 'label'][
+    order(-mcc.optimism.corrected.training)
+    , .(
+      Model = labelAppendix
+      , Category = category
+      , `Cutoff Probability` = cutoff.mcc.training
+      , `Lower Bound` = mcc.bootstrap.lower.BCa.training
+      , `Apparent` = mcc.apparent.training
+      , `Bootstrapped Mean` = mcc.bootstrap.training
+      , `Optimism Corrected` = mcc.optimism.corrected.training
+      , `Upper Bound` = mcc.bootstrap.upper.BCa.training
+    )
+  ]
+  , align = rep('c', 8)
+  , caption = 'Table of Optimal MCC values by TBC Model (Training Data)'
+) %>% 
+  kable_styling(bootstrap_options = "striped", full_width = F) %>%
+  add_header_above(c(' ' = 4, 'Optimal MCC' = 3, ' ' = 1))
 ```
 
-## Receive GED
+### Holdout Data
 
-```{r appendix_model5, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'get_ged'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
+```{r compareMCC_table_holdout}
+kable(
+  outputs[tbc.models[, .(label, labelAppendix)], on = 'label'][
+    order(-mcc.optimism.corrected.holdout)
+    , .(
+      Model = labelAppendix
+      , Category = category
+      , `Cutoff Probability` = cutoff.mcc.holdout
+      , `Lower Bound` = mcc.bootstrap.lower.bootPercentile.holdout
+      , `Apparent` = mcc.apparent.holdout
+      , `Bootstrapped Mean` = mcc.bootstrap.holdout
+      , `Optimism Corrected` = mcc.optimism.corrected.holdout
+      , `Upper Bound` = mcc.bootstrap.upper.bootPercentile.holdout
+    )
+  ]
+  , align = rep('c', 8)
+  , caption = 'Table of Optimal MCC values by TBC Model (Holdout Data)'
+) %>% 
+  kable_styling(bootstrap_options = "striped", full_width = F) %>%
+  add_header_above(c(' ' = 4, 'Optimal MCC' = 3, ' ' = 1))
 ```
 
-## Receive Bachelor's
+## Model Output{#appendixResults}
 
-```{r appendix_model6, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'get_bachelors'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
+```{r generateAppendix, include = FALSE}
+src <- lapply(tbc.models$label, function(model) knit_expand(file = "200 Code/Appendix Template.Rmd"))
 ```
 
-## Out of Labor Force
+`r knit(text = unlist(src))`
 
-```{r appendix_model7, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'oolf4wks'
-summary(outputs[label == (model), glm.model][[1]])
+## Validating Results with boot Package{#bootPackage}
 
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
+```{r validateWithBootPackage_setup}
+DT.compare.bootCI <- outputs[
+  , .(
+    label = factor(label
+                   , levels = rev(levels(label))
+            )
+      , mcc.bootstrap.lower.BCa.training, mcc.apparent.training, mcc.bootstrap.upper.BCa.training
+      , lower.mcc.bootPackage, optimal.mcc.bootPackage, upper.mcc.bootPackage
+      , lb.diff = mcc.bootstrap.lower.BCa.training - lower.mcc.bootPackage
+      , ub.diff = mcc.bootstrap.upper.BCa.training - upper.mcc.bootPackage
+  )
+][, maxAbs.diff := pmax(abs(lb.diff), abs(ub.diff))]
 
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
+DT.compare.bootCI.melt <- melt(
+  DT.compare.bootCI
+  , id.vars = c('label', 'lb.diff', 'ub.diff', 'maxAbs.diff')
+  , measure.vars = patterns('lower','(apparent|optimal)','upper')
+  , variable.name = 'implementation'
+  , value.name = c('lower', 'estimate', 'upper')
+)
 
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
+DT.compare.bootCI.melt[, label := factor(label, levels = DT.compare.bootCI[order(-maxAbs.diff), label], ordered = TRUE)]
 
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
+implementation.names <- c('Custom BCa for data.table', 'boot package')
+DT.compare.bootCI.melt[
+  , implementation := factor(
+    implementation.names[c(rep(1,nrow(DT.compare.bootCI)), rep(2,nrow(DT.compare.bootCI)))]
+    , levels = implementation.names
+  )
+]
 ```
 
-## Out of Labor Force - Highschool
 
-```{r appendix_model8, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'oolf4wks.hs'
-summary(outputs[label == (model), glm.model][[1]])
+One way to test whether the results of this analysis are reasonable is to reproduce part of it using the _boot_ package, which facilitates bootstrapping and can calculate BCa intervals. In the script used to store the project's results (i.e., *TBC_Bootstrap*), the _boot::boot_ function performs the following steps:
 
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
+1) Fits a probability model to a bootstrapped version of each model's training data
 
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
+2) Creates a classification using the latter model's fitted values and the optimal cutoff value calculated from the custom bootstrap functions used in this project
 
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
+3) Calculates the MCC value for that bootstrapped model
 
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
+|     The plot below compares the MCC estimates and BCa intervals as calculated by this analysis as well as the _boot_ package. The MCC estimates are identical and the BCa intervals tend to agree very well. The model labels are ordered by the largest difference in BCa bounds. E.g., if the difference in lower BCa bounds for the Get GED model is `r DT.compare.bootCI[label == 'get_ged', lb.diff]`, and for the upper BCa bounds `r DT.compare.bootCI[label == 'get_ged', ub.diff]`, then the largest difference in BCa bounds for this model is `r DT.compare.bootCI[label == 'get_ged', ub.diff]`. The model with the most extreme difference in BCa bounds is `r DT.compare.bootCI[order(-maxAbs.diff)][1][tbc.models, on = 'label', nomatch = 0][, labelAppendix]` with a value of `r DT.compare.bootCI[order(-maxAbs.diff)][1][tbc.models, on = 'label', nomatch = 0][, maxAbs.diff]`.
+
+```{r validateWithBootPackage_plot, fig.cap = 'Plot comparing bootstrapped MCC estimates and confidence intervals measured by this analysis and the boot package'}
+ggplot(
+  DT.compare.bootCI.melt
+  , aes(
+    x = label
+    , ymin = lower
+    , y = estimate
+    , ymax = upper
+    , color = implementation
+    , group = implementation
+  )
+) + 
+  geom_point() +
+  geom_errorbar(alpha = 0.5) + 
+  theme_bw() +
+  coord_flip()
 ```
 
-## Out of Labor Force - College
-
-```{r appendix_model9, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'oolf4wks.col'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
+```{r validateWithBootPackage_table}
+kable(
+  DT.compare.bootCI[tbc.models[, .(label, labelAppendix)], on = 'label'][order(maxAbs.diff)][
+    , .(
+      `Model` = labelAppendix
+      , `Largest Difference in BCa bounds` = maxAbs.diff
+    )
+  ]
+  , align = c('l', 'c')
+  , caption = 'Table comparing bootstrapped MCC estimates and confidence intervals measured by this analysis and the boot package'
+) %>% kable_styling(bootstrap_options = "striped", full_width = F)
 ```
 
-## Unemployed For At Least 4 Weeks
+## Session Info
 
-```{r appendix_model10, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'unemployed4wks'
-summary(outputs[label == (model), glm.model][[1]])
+### R
 
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
+```{r rSessionInfo}
+sessionInfo()
 ```
 
-## Unemployed For At Least 4 Weeks - Highschool
+### RStudio
 
-```{r appendix_model11, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'unemployed4wks.hs'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
-```
-
-## Unemployed For At Least 4 Weeks - College
-
-```{r appendix_model12, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'unemployed4wks.col'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
-```
-
-## Ever Get Married
-
-```{r appendix_model13, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'ever_married30'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
-```
-
-## Ever Get Married - Highschool
-
-```{r appendix_model14, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'ever_married30.hs'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
-```
-
-## Ever Get Married - College
-
-```{r appendix_model15, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'ever_married30.col'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
-```
-
-## Divorced in 1st 5 Years of Marriage
-
-```{r appendix_model16, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'divorced_in5yrs'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
-```
-
-## Divorced in 1st 5 Years of Marriage - Highschool
-
-```{r appendix_model17, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'divorced_in5yrs.hs'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
-```
-
-## Divorced in 1st 5 Years of Marriage - College
-
-```{r appendix_model18, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'divorced_in5yrs.col'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
-```
-
-## Divorced in 1st 5 Years of Marriage - Parents Status
-
-```{r appendix_model19, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'divorced_in5yrs_parents'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
-```
-
-## Ever Surveyed in Jail
-
-```{r appendix_model20, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'surveyed_in_jail'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
-```
-
-## Ever Surveyed in Jail - Highschool
-
-```{r appendix_model21, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'surveyed_in_jail.hs'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
-```
-
-## Yes to "Middle Class Values"
-
-```{r appendix_model22, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'middle_class_values'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
-```
-
-## Yes to "Middle Class Values" - Highschool
-
-```{r appendix_model23, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'middle_class_values.hs'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
-```
-
-## Yes to "Middle Class Values" - College
-
-```{r appendix_model24, out.width = '4000px', fig.show = 'hold', echo = FALSE}
-model <- 'middle_class_values.col'
-summary(outputs[label == (model), glm.model][[1]])
-
-plots[[model]][['plots.a2e_zAFQT89']]
-plots[[model]][['plots.a2e_zSES']]
-plots[[model]][['plots.a2e_zAge']]
-
-cat(paste0('The optimal MCC value using training data = ',outputs[label == (model), mcc.optimal.training][[1]]))
-cat(paste0('The cutoff value associated with the optimal MCC value from training data = ',outputs[label == (model), cutoffs][[1]]['cutoff.mcc']))
-plots[[model]][['plot.dist.mcc.training.bootCI']]
-
-cat(paste0('The optimal MCC value using holdout data = ',outputs[label == (model), mcc.optimal.holdout][[1]]))
-plots[[model]][['plot.dist.mcc.holdout.bootCI']]
-
-plots[[model]][['plots.classFormat.mcc.training_plot.a2e']]
-plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
-```
+Version 1.1.463
 
 # References
 
-[^1]: Herrnstein and Murray. (1994). The Bell Curve. New York: The Free Press.
+## Software
+
+1. R Core Team (2018). R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria. URL
+  https://www.R-project.org/.
+  
+2. Matt Dowle and Arun Srinivasan (2018). data.table: Extension of `data.frame`. R package version 1.11.8.
+  https://CRAN.R-project.org/package=data.table
+
+3. H. Wickham. ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York, 2016.
+
+4. Luke Tierney, A. J. Rossini, Na Li and H. Sevcikova (2018). snow: Simple Network of Workstations. R package
+  version 0.4-3. https://CRAN.R-project.org/package=snow
+  
+5. Claus O. Wilke (2018). cowplot: Streamlined Plot Theme and Plot Annotations for 'ggplot2'. R package
+  version 0.9.3. https://CRAN.R-project.org/package=cowplot
+
+6. Yihui Xie (2018). knitr: A General-Purpose Package for Dynamic Report Generation in R. R package version 1.20.
+
+7. Yihui Xie (2015) Dynamic Documents with R and knitr. 2nd edition. Chapman and Hall/CRC. ISBN 978-1498716963
+
+8. Yihui Xie (2014) knitr: A Comprehensive Tool for Reproducible Research in R. In Victoria Stodden, Friedrich Leisch and Roger D. Peng, editors,
+  Implementing Reproducible Computational Research. Chapman and Hall/CRC. ISBN 978-1466561595
+
+9. Erich Neuwirth (2014). RColorBrewer: ColorBrewer Palettes. R package version 1.1-2. https://CRAN.R-project.org/package=RColorBrewer
+
+10. Hlavac, Marek (2018). stargazer: Well-Formatted Regression and Summary Statistics Tables. R package version
+  5.2.1. https://CRAN.R-project.org/package=stargazer
+
+11. Hao Zhu (2018). kableExtra: Construct Complex Table with 'kable' and Pipe Syntax. R package version 0.9.0.
+  https://CRAN.R-project.org/package=kableExtra
+
+12. RStudio Team (2016). RStudio: Integrated Development for R. RStudio, Inc., Boston, MA URL
+  http://www.rstudio.com/.
+
+## Publications
+
+[^1]: Herrnstein and Murray. (1994). The Bell Curve. New York: The Free Press. 1st paperback edition 1996. ISBN-13: 978-0-684-82429
 
 [^2]: Bureau of Labor Statistics, U.S. Department of Labor. National Longitudinal Survey of Youth 1979 cohort, 1979-2012 (rounds 1-25). Produced and distributed by the Center for Human Resource Research, The Ohio State University. Columbus, OH: 2014.
 
@@ -991,8 +1528,12 @@ plots[[model]][['plots.classFormat.mcc.holdout_plot.a2e']]
 
 [^7]: Miele, F. (1995). For Whom The Bell Curve Tolls. Skeptic, Volume 3, #3, 34 – 41.
 
-[^8]: Boughorbel S, Jarray F, El-Anbari M (2017) Optimal classifier for imbalanced data using Matthews Correlation Coefficient metric. PLoS ONE 12(6).
+[^8]: Mukaka MM. Statistics corner: A guide to appropriate use of correlation coefficient in medical research. Malawi Med J. 2012;24(3):69-71.
 
-[^9]: Mukaka MM. Statistics corner: A guide to appropriate use of correlation coefficient in medical research. Malawi Med J. 2012;24(3):69-71.
+[^9]: Boughorbel S, Jarray F, El-Anbari M (2017) Optimal classifier for imbalanced data using Matthews Correlation Coefficient metric. PLoS ONE 12(6).
 
-[^10]: Herrnstein and Murray (1994). Nation.txt, Nation.hdr, and 2TBC_Documentation.ascii. Retrieved from http://www.rasmusen.org/xpacioli/bellcurve.
+[^10]: Efron B. (1983). Estimating the error rate of a prediction rule: improvement on cross-validation. Journal of the American Statistical Association, 78:316-331.
+
+[^11]: Harrell, F. E., Lee, K. L., & Mark, D. B. (1996). Tutorial in Biostatistics: Multivariable prognostic models. Statistics in Medicine, 15:361-387.
+
+[^12]: Herrnstein and Murray (1994). Nation.txt, Nation.hdr, and 2TBC_Documentation.ascii. Retrieved from http://www.rasmusen.org/xpacioli/bellcurve.
