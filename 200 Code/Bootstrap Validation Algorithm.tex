@@ -1,0 +1,81 @@
+\documentclass[preview]{standalone}
+
+\usepackage{epsfig}
+
+%\usepackage{algorithm2e}
+%\usepackage[linesnumbered]{algorithm2e}
+%\usepackage[linesnumbered,ruled]{algorithm2e}
+\usepackage[linesnumbered,ruled,vlined,noend]{algorithm2e}
+\usepackage{scalerel}
+\usepackage{amsmath}
+
+\title{Al}
+\author{Will Frierson}
+
+\begin{document}
+
+\let\oldnl\nl% Store \nl in \oldnl
+\newcommand{\nonl}{\renewcommand{\nl}{\let\nl\oldnl}}% Remove line number for one line
+
+\newcommand{\train}{T_m}
+\newcommand{\hold}{H_m}
+\newcommand{\modelTrain}{f_{\scaleto{m, T}{5pt}}}
+\newcommand{\scoreTrain}{\modelTrain\bigl(\train\bigr)}
+\newcommand{\scoreHold}{\modelTrain\bigl(\hold\bigr)}
+\newcommand{\trainBoot}{T_{m,i}^{*}}
+\newcommand{\holdBoot}{H_{m,i}^{*}}
+\newcommand{\modelTrainBoot}{f^*_{\scaleto{m, T, i}{5pt}}}
+\newcommand{\scoreTrainBootTrain}{\modelTrainBoot\bigl(\train\bigr)}
+\newcommand{\scoreTrainBootHold}{\modelTrainBoot\bigl(\hold\bigr)}
+\newcommand{\scoreTrainBoot}{\modelTrainBoot\bigl(\trainBoot\bigr)}
+\newcommand{\scoreHoldBoot}{\modelTrainBoot\bigl(\holdBoot\bigr)}
+\newcommand{\scoredGenericBoot}{\modelTrainBoot\left(D\right)}
+\newcommand{\scoredGeneric}{\modelTrain\left(D\right)}
+\newcommand{\classTrainGeneric}{class_{m, T, c}(D)}
+\newcommand{\classTrainBootGeneric}{class^*_{m, T, i, c}(D)}
+\newcommand{\mccTrainGeneric}{MCC_{m, T, c}(D)}
+\newcommand{\mccTrainGenericBoot}{MCC^*_{m, T, i, c}(D)}
+\newcommand{\meanMCCBoot}{\overline{MCC}^*_{m, T, c}(D)}
+\newcommand{\optimismGeneric}{O_{m, T, c}(D)}
+\newcommand{\optimalCutoff}{c^*_{\scaleto{m,T}{5pt}}(D)}
+\begin{algorithm}[H]
+\DontPrintSemicolon
+\SetAlgoLined
+\ForEach{\upshape TBC model, $m$}{
+		Specify training and holdout data, $T_m$ and $H_m$\;
+		Fit probability model, $\modelTrain$, using data from $\train$\;
+		Apply model to $T_m$ and $H_m$: $\scoreTrain$ and $\scoreHold$\;
+		\BlankLine
+		\ForEach{\upshape data set $D \in \{\train, \hold\}$}{
+				\ForEach{\upshape cutoff $c \in $ [500 point linear grid of $(0,1)$]}{
+						Assign classifications: $\classTrainGeneric = integer\big(\scoredGeneric > c\big)$\;
+							\BlankLine
+						Calculate MCC value between the model's response, $y_D$, and the latter classifications: $\mccTrainGeneric = corr\Big(y_D, \classTrainGeneric\Big)$\;
+				}					
+		}
+		\BlankLine
+		\ForEach{\upshape Bootstrap iteration, $i$}{
+			Get bootstrapped samples $\trainBoot$ and $\holdBoot$\;
+			Fit bootstrapped probability model, $\modelTrainBoot$, using bootstrapped data from $\trainBoot$\;
+			Apply bootstrapped model to original data and bootstrapped samples: $\scoreTrainBootTrain$, $\scoreTrainBootHold$, $\scoreTrainBoot$, $\scoreHoldBoot$\;
+			\ForEach{\upshape data set $D \in \{\train, \hold, \trainBoot, \holdBoot\}$}{
+					\ForEach{\upshape cutoff $c \in $ [500 point linear grid of $(0,1)$]}{
+							Assign bootstrapped classifications: $\classTrainBootGeneric = integer\big(\scoredGenericBoot > c\big)$\;
+							\BlankLine
+							Calculate bootstrapped MCC value between the model's response, $y_D$, and the latter classifications: $\mccTrainGenericBoot = corr\Big(y_D, \classTrainBootGeneric\Big)$\;
+					}
+			}
+		}
+		\BlankLine
+		\ForEach{\upshape original data $D \in \{\train, \hold\}$ and bootstrapped sample $D^* \in \{\trainBoot, \holdBoot\}$}{
+				\ForEach{\upshape cutoff $c \in $ [500 point linear grid of $(0,1)$]}{
+						Calculate bootstrapped optimism for MCC value at cutoff $c$: $\optimismGeneric = \underset{i}{\mathbf{E}}[MCC^*_{m, T, i, c}(D^*) - MCC^*_{m, T, i, c}(D)]$\;
+						Calculate optimism-corrected MCC value at cutoff $c$: $\widetilde{MCC}_{m, T, c}(D) = \mccTrainGeneric - \optimismGeneric$\;
+						Average MCC values across bootstrapped iterations: $\meanMCCBoot = \underset{i}{\mathbf{E}}[MCC^*_{m, T, c, i}(D)]$\;
+		}
+				Find optimal cutoff, $\optimalCutoff$, that maximizes mean of bootstrapped MCC values: $\optimalCutoff$ = $\max\limits_c \meanMCCBoot$\;
+				}
+}
+\end{algorithm} 
+
+\end{document}
