@@ -1,0 +1,201 @@
+```{r header_{{model}}, results = 'asis'}
+cat(paste0('### ', tbc.models[label == '{{model}}', labelAppendix]))
+```
+
+```{r header_{{model}}_parameters, results = 'asis'}
+cat('#### Model Parameters')
+```
+
+```{r appendix_summary_{{model}}, results = 'asis'}
+model <- '{{model}}'
+title.model <- paste0(
+  'Reproduced TBC Probability Model: '
+  , tbc.models[label == model, labelAppendix]
+)
+target.model <- tbc.models[label == model, response]
+
+stargazer(
+  outputs[label == model, glm.model][[1]]
+  , type = 'html'
+  , title = title.model
+  , dep.var.labels = target.model
+  , digits = 5
+)
+```
+
+```{r header_{{model}}_a2e, results = 'asis'}
+cat('#### Plotting Modeled Probabilities{.tabset .tabset-fade}')
+```
+
+```{r header_{{model}}_zAFQT89, results = 'asis'}
+cat('##### zAFQT89')
+```
+
+```{r appendix_a2e_zAFQT89_{{model}}, fig.show = 'hold', fig.cap = 'Plot of observed vs bootstrapped modeled probabilities across zAFQT89'}
+model <- '{{model}}'
+factorSelection <- 'zAFQT89'
+
+plotFrequencyVsProbability.bootCI(
+     DT.factors = inputs[[model]][['DT.model.training']]
+    , DT.bootCI = DTs.probability.bootCI.training[[model]][[factorSelection]]
+    , xString = factorSelection
+    , yString = inputs[[model]][['model parameters']][, response]
+    , key = 'ID'
+    , bandingPrecision = 10
+    , alpha = 0.05
+    , response.label = inputs[[model]][['model parameters']][, target.descriptions.formatted]
+)
+```
+
+```{r header_{{model}}_zSES, results = 'asis'}
+cat('##### zSES')
+```
+
+```{r appendix_a2e_zSES_{{model}}, fig.show = 'hold', fig.cap = 'Plot of observed vs bootstrapped modeled probabilities across zSES'}
+model <- '{{model}}'
+factorSelection <- 'zSES'
+
+plotFrequencyVsProbability.bootCI(
+     DT.factors = inputs[[model]][['DT.model.training']]
+    , DT.bootCI = DTs.probability.bootCI.training[[model]][[factorSelection]]
+    , xString = factorSelection
+    , yString = inputs[[model]][['model parameters']][, response]
+    , key = 'ID'
+    , bandingPrecision = 10
+    , alpha = 0.05
+    , response.label = inputs[[model]][['model parameters']][, target.descriptions.formatted]
+)
+```
+
+```{r header_{{model}}_zAge, results = 'asis'}
+cat('##### zAge')
+```
+
+```{r appendix_a2e_zAge_{{model}}, fig.show = 'hold', fig.cap = 'Plot of observed vs bootstrapped modeled probabilities across zAge'}
+model <- '{{model}}'
+factorSelection <- 'zAge'
+
+plotFrequencyVsProbability.bootCI(
+     DT.factors = inputs[[model]][['DT.model.training']]
+    , DT.bootCI = DTs.probability.bootCI.training[[model]][[factorSelection]]
+    , xString = factorSelection
+    , yString = inputs[[model]][['model parameters']][, response]
+    , key = 'ID'
+    , bandingPrecision = 10
+    , alpha = 0.05
+    , response.label = inputs[[model]][['model parameters']][, target.descriptions.formatted]
+)
+```
+
+```{r header_{{model}}_mcc, results = 'asis'}
+cat('#### Plotting MCC Distributions{.tabset .tabset-fade}')
+```
+
+```{r appendix_CI_{{model}}, fig.show = 'hold'}
+model <- '{{model}}'
+
+kable(
+  data.table(
+    Dataset = c('Training', 'Holdout')
+    , `Cutoff Probability` = c(
+      outputs[label == (model), cutoff.mcc.training][[1]]
+      , outputs[label == (model), cutoff.mcc.holdout][[1]]
+    )
+    , `Lower Bound` = c(
+      outputs[label == (model), mcc.bootstrap.lower.BCa.training][[1]]
+      , outputs[label == (model), mcc.bootstrap.lower.bootPercentile.holdout][[1]]
+    )
+    , `Apparent` = c(
+      outputs[label == (model), mcc.apparent.training][[1]]
+      , outputs[label == (model), mcc.apparent.holdout][[1]]
+    )
+    , `Bootstrapped Mean` = c(
+      outputs[label == (model), mcc.bootstrap.training][[1]]
+      , outputs[label == (model), mcc.bootstrap.holdout][[1]]
+    )
+    , `Optimism Corrected` = c(
+      outputs[label == (model), mcc.optimism.corrected.training][[1]]
+      , outputs[label == (model), mcc.optimism.corrected.holdout][[1]]
+    )
+    , `Upper Bound` = c(
+      outputs[label == (model), mcc.bootstrap.upper.BCa.training][[1]]
+      , outputs[label == (model), mcc.bootstrap.upper.bootPercentile.holdout][[1]]
+    )
+  )
+  , align = rep('c', 7)
+) %>% 
+  kable_styling(bootstrap_options = "striped", full_width = F) %>%
+  add_header_above(c(' ' = 3, 'Optimal MCC' = 3, ' ' = 1))
+```
+
+```{r header_{{model}}_mcc_training, results = 'asis'}
+cat('##### Training')
+```
+
+```{r appendix_mcc_training_{{model}}, fig.show = 'hold', fig.cap = 'Plot of bootstrapped MCC distributions by cutoff (Training Data)'}
+plotPerformanceMetric.cutoff.bootCI(
+  DT.bootCI = DT.mcc.bootCI.training[label == model]
+  , performanceMetric = 'mcc'
+  , performanceMetric.boot = 'mcc.bootstrap'
+  , cutoff.name = 'cutoff'
+  , lowerCI.name = 'lower'
+  , upperCI.name = 'upper'
+)
+```
+
+```{r header_{{model}}_mcc_holdout, results = 'asis'}
+cat('##### Holdout')
+```
+
+```{r appendix_mcc_holdout_{{model}}, fig.show = 'hold', fig.cap = 'Plot of bootstrapped MCC distributions by cutoff (Holdout Data)'}
+plotPerformanceMetric.cutoff.bootCI(
+  DT.bootCI = DT.mcc.bootCI.holdout[label == model]
+  , performanceMetric = 'mcc'
+  , performanceMetric.boot = 'mcc.bootstrap'
+  , cutoff.name = 'cutoff'
+  , lowerCI.name = 'lower'
+  , upperCI.name = 'upper'
+)
+```
+
+```{r header_{{model}}_class, results = 'asis'}
+cat('#### Plotting Modeled Classifications{.tabset .tabset-fade}')
+```
+
+```{r header_{{model}}_class_training, results = 'asis'}
+cat('##### Training')
+```
+
+```{r appendix_class_training_{{model}}, fig.show = 'hold', fig.cap = 'Plot comparing bootstrapped classifications and modeled probabilities (Training Data)'}
+plotFrequencyVsClassification.bootCI(
+  DT.factors = inputs[[model]][['DT.model.training']]
+  , DT.classification.bootCI = DTs.mcc.classification.bootCI.training[[model]][['zAFQT89']]
+  , DT.probabilities.bootCI = DTs.probability.bootCI.training[[model]][['zAFQT89']]
+  , xString = 'zAFQT89'
+  , yString = outputs[label == model, response]
+  , cutoff = outputs[label == model, cutoff.mcc.training]
+  , key = 'ID'
+  , bandingPrecision = 10
+  , alpha = 0.05
+  , response.label = outputs[label == model, target.descriptions.formatted]
+)
+```
+
+```{r header_{{model}}_class_holdout, results = 'asis'}
+cat('##### Holdout')
+```
+
+```{r appendix_class_holdout_{{model}}, fig.show = 'hold', fig.cap = 'Plot comparing bootstrapped classifications and modeled probabilities (Holdout Data)'}
+plotFrequencyVsClassification.bootCI(
+  DT.factors = inputs[[model]][['DT.model.holdout']]
+  , DT.classification.bootCI = DTs.mcc.classification.bootCI.holdout[[model]][['zAFQT89']]
+  , DT.probabilities.bootCI = DTs.probability.bootCI.holdout[[model]][['zAFQT89']]
+  , xString = 'zAFQT89'
+  , yString = outputs[label == model, response]
+  , cutoff = outputs[label == model, cutoff.mcc.training]
+  , key = 'ID'
+  , bandingPrecision = 10
+  , alpha = 0.05
+  , response.label = outputs[label == model, target.descriptions.formatted]
+)
+```
