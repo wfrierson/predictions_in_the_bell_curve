@@ -196,7 +196,6 @@ logit.bootstrap <- function(
   setkey(prob.boot.training, bootIteration)
   
   # Bootstrapped fitted probabilities from training data
-  # prob.boot.holdout <- do.call(cbind, lapply(boot.output, function(x) x[['fitted.values.holdout']]))
   prob.boot.holdout <- rbindlist(lapply(boot.output, function(x) x[['fitted.values.holdout']]))
   
   setkey(prob.boot.holdout, bootIteration)

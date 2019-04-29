@@ -243,30 +243,6 @@ plotFrequencyVsClassification.bootCI <- function(
 
   DT.factors[, (xString_banded) := factor(floor(get(xString) * bandingPrecision) / bandingPrecision)]
   DT.factors[, (yString_class) := as.integer(get(yString_modeled) > cutoff)]
-
-  # colnames.prob.boot <- grep('iter', copy(colnames(DT.probabilities.boot)), value = TRUE)
-  # DT.probabilities.boot[
-  #   , paste0('class', seq_along(colnames.prob.boot)) := lapply(.SD, function(prob) as.integer(prob > cutoff))
-  #   , .SDcols = colnames.prob.boot
-  #   , by = key
-  # ]
-  # 
-  # colnames.prob.jack <- grep('iter', copy(colnames(DT.probabilities.jackknife)), value = TRUE)
-  # DT.probabilities.jackknife[
-  #   , paste0('class', seq_along(colnames.prob.jack)) := lapply(.SD, function(prob) as.integer(prob > cutoff))
-  #   , .SDcols = colnames.prob.jack
-  #   , by = key
-  # ]
-  # 
-  # DT.bootCI <- calculateConfidenceIntervals.BCa.classification(
-  #   DT.factors = DT.factors
-  #   , DT.classifications.boot = DT.probabilities.boot
-  #   , DT.classifications.jackknife = DT.probabilities.jackknife
-  #   , xString = xString
-  #   , yString = yString
-  #   , key = key
-  #   , bandingPrecision = bandingPrecision
-  # )
   
   if(is.null(DT.classification.bootCI)) {
     # Calculate bias-corrected accelerated bootstrapped 95% confidence intervals for yString by xString
@@ -547,9 +523,6 @@ plotPerformanceMetric.cutoff.bootCI <- function(
     # These are assumed to be small enough to copy without a material memory impact
     DT.bootCI <- copy(DT.bootCI)
   }
-  
-  # Use name coming from calculateConfidenceIntervals.BCa
-  # DT.bootCI[, (performanceMetric) := 2 * get(performanceMetric) - get(performanceMetric.boot)]
   
   names.plot <- c('Original Sample', 'Bootstrapped Average')
   setnames(DT.bootCI, c(performanceMetric, performanceMetric.boot), names.plot)
@@ -938,27 +911,5 @@ plotMultipleClassifications <- function(
       , legend.position="bottom"
     )
   
-  # To show which factor levels of xString_banded have data (and so would effect the performance metric), plot bar chart of record counts using original data
-  # For clarity, remove all other features for this plot
-  # plot.volume <- ggplot(DT.plot[group == (yString)], aes_string(x = xString_banded, y = 'counts')) + geom_bar(stat = 'identity') + theme_void()
-  
-  # NOTE: Commenting the following section out because Rstudio has a bug with plotly when the session is refreshed. 
-  # Reverting to ggplot2 objects instead, which can later be transformed into plotly objects in a single session.
-  # See here for more detalis: https://github.com/ropensci/plotly/issues/1204
-  
-  ## Convert to plotly object to become interactive
-  # plot.a2e.plotly <- ggplotly(plot.a2e) %>% layout(legend = list(x = 0.84, y = 0.78))
-  # plot.volume.plotly <- ggplotly(plot.volume) %>% layout(xaxis = list(showgrid = FALSE), yaxis = list(showgrid = FALSE, zeroline = FALSE, showline = FALSE))
-  
-  # #Combine plots
-  # p <- subplot(plot.volume.plotly, plot.a2e.plotly, nrows = 2, heights = c(0.2, 0.8), shareX = TRUE, titleY = TRUE)
-  
-  ## Remove new columns to leave DT.predictions unchanged
-  # colnames.delte.ind <- (bootIterations+5):ncol(DT.predictions)
-  # DT.predictions[, (colnames.delte.ind) := NULL]
-  
-  # return(p)
-  
-  # output <- list('plot.a2e' = plot.a2e, 'plot.volume' = plot.volume)
   return(plot.a2e)
 }

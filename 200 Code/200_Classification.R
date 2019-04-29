@@ -330,12 +330,6 @@ calculateConfidenceIntervals.classification <- function(
     )
     , by = c(bootLabelString, xString_banded)
   ]
-  # DT.classifications.boot.sample <- DT.classifications.boot.sample[
-  #   , .(
-  #     classification = mean(classification, na.rm = TRUE)
-  #   )
-  #   , by = c(bootLabelString, xString_banded)
-  # ]
   
   DT.apparent.agg <- DT.apparent[
     , .(
