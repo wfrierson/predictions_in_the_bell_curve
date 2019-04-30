@@ -59,7 +59,7 @@ Despite its publication nearly 25 years ago, the controversial book The Bell Cur
 
 |     *I originally wrote this for a data science master's course. A friend had mentioned TBC after hearing an interview with Charles Murray. I had not heard much about TBC at that time. After going through the book, I found it very odd that no raw data (i.e., observed data points, not just modeled curves) was presented to readers, and that causal models were mixed up with predictive models. Since TBC is politically motivated, I wanted to reproduce as many models as possible and do a more thorough analysis.* __I want to be clear that I never agreed with the arguments or recommendations in TBC.__ *I don't endorse the book. In fact, this paper demonstrates how these 24 TBC models are unreliable.*
 
-|     *For non-technical readers, I recommend reading the following sections: [Background](#background), [Comparison of Optimal MCC Values](#optimalMCC), and [Discussion](#discussion). For statisticians and data scientists, all results are reproducible with an R project made available on [Github](https://github.com/wfrierson/predictions_in_the_bell_curve/tree/master/200%20Code). See the [Methods](#methods) section for more details. Also, this markdown document uses code folding. To see the underlying code, click the adjacent "CODE" button. From a data science perspective, this project is interesting because it help illustrate:*
+|     *For non-technical readers, I recommend reading the following sections: [Background](#background), [Comparison of Optimal MCC Values](#optimalMCC), and [Discussion](#discussion). For statisticians and data scientists, all results are reproducible with an R project made available on [Github](https://github.com/wfrierson/predictions_in_the_bell_curve/tree/master/200%20Code). See the [Methods](#methods) section for more details. Also, this markdown document uses code folding. To see the underlying code, click the adjacent "CODE" button. From a data science perspective, this project is interesting because it helps illustrate:*
 
 * _Reproducible research_
 
@@ -837,7 +837,7 @@ $$
 
 # Data{#data}
 
-Since reproducing TBC's models is a goal for this project, I want the exact data used by the authors. With the NLSY79 being a public dataset, this is possible. However, the NLSY79 uses a special variable coding system which was not noted in TBC.  To credit the authors, they did release their modified datasets online and included a data dictionary[^10]. In order to reproduce TBC's results as closely as possible, I opted to use the authors’ data (i.e., "Nation.txt")
+Since reproducing TBC's models is a goal for this project, I want the exact data used by the authors. With the NLSY79 being a public dataset, this is possible. However, the NLSY79 uses a special variable coding system which was not noted in TBC.  To credit the authors, they did release their modified datasets online and included a data dictionary[^12]. In order to reproduce TBC's results as closely as possible, I opted to use the authors’ data (i.e., "Nation.txt")
 
 ## Training vs Holdout data
 
@@ -901,6 +901,8 @@ kable(
 
 # Methods{#methods}
 
+## Procedure
+
 The statistical methods of this report are described in the figure below. Since this procedure is non-trivial, I simplify it as the following: 
 
 For 10,000 bootstrap iterations and each TBC model:
@@ -931,7 +933,7 @@ For 10,000 bootstrap iterations and each TBC model:
     
     * The optimism for MCC
     
-    * Bias-corrected accelerated (BCa) 95% confidence intervals for training data
+    * Bias-corrected accelerated (BCa) 95% confidence intervals[^13] for training data
     
     * Bootstrapped percentile 95% confidence intervals for holdout data
 
@@ -944,6 +946,8 @@ __Note__: MCC data related to the holdout sample use bootstrapped percentile con
 # https://github.com/wfrierson/predictions_in_the_bell_curve/blob/master/200%20Code/Bootstrap%20Validation%20Algorithm.tex
 knitr::include_graphics(file.path(code.folder, 'Bootstrap Validation Algorithm.png'))
 ```
+
+## Summary of Code
 
 These steps are implemented in R using the following scripts within this repository:
 
@@ -959,10 +963,27 @@ These steps are implemented in R using the following scripts within this reposit
 
 * [TBC_Bootstrap.R](https://github.com/wfrierson/predictions_in_the_bell_curve/blob/master/200%20Code/TBC_Bootstrap.R): Recursive code that executes a batch run for each TBC probability model. **This script is the workhorse of the entire project**. See its code for details.
 
-**Note**: When 10,000 bootstrap iterations are used on all 24 models in the prior script (with parallel computing), the entire recursive batch process:
+## Reproducing This Project{#reproduceProject}
 
-- Produces 193 files in the "100 Data" folder, 6.56 MBs in total
-- Takes 4 - 5 hours
+For readers that would like to reproduce this project: 
+
+* Clone the [git repo](https://github.com/wfrierson/predictions_in_the_bell_curve)
+
+* Install the relevant packages listed in [000_Misc.R](https://github.com/wfrierson/predictions_in_the_bell_curve/blob/master/200%20Code/000_Misc.R). If there are versioning issues, please see the section listing my [R session info](#sessionInfo).
+
+* Execute the following line of code from the project directory, which will launch the recursive batch runs for each of the 24 TBC models:
+
+> source('200 Code/TBC_Bootstrap.R', encoding = 'UTF-8', echo=FALSE)
+
+**Notes**: 
+
+1. When 10,000 bootstrap iterations are used on all 24 models in the prior script (with parallel computing), the entire recursive batch process:
+
+    - Produces 193 files in the "100 Data" folder, 6.56 MBs in total
+
+    - Takes 4 - 5 hours
+
+2. Review the initial parameters for the batch run procedure on lines 55 - 57 to make sure they're reasonable for your machine.
 
 # Results{#results}
 
@@ -1292,21 +1313,9 @@ ggplot(
 
 # Discussion{#discussion}
 
-What does the plot comparing optimal MCC values mean? Using the [guidelines for interpreting MCC values](#mcc) listed above, nearly all TBC models have a low correlation (i.e., below 50%) between their observed binary target and the bootstrapped classification when evaluated on either training or holdout data. **This suggests TBC's probability models are not materially predictive and so they inadequately support the authors' public policy recommendations.**
+What does the [plot comparing optimal MCC values](#optimalMCC) mean? Using the [guidelines for interpreting MCC values](#mcc) listed above, nearly all TBC models have a low correlation (i.e., MCC < 50%) between their observed binary target and the bootstrapped classification when evaluated on either training or holdout data. The classification plots tell a similar story: the confidence intervals for the optimal classifications tend to not follow the general trend of the observed data. *Combined, these properties suggest that TBC's probability models are not materially predictive and so they inadequately support the authors' public policy recommendations.*
 
-|     The only TBC models with optimal MCC values near 50% are those with binary targets related to education: receiving a GED, receiving a Bachelor's, or dropping out of school. Although I am not a social psychologist, these results seem plausible, i.e., having lower IQ has a stronger association with having academic issues. Again using the above guidelines for interpreting MCC values, the optimal MCC values for these models are "moderate." While these models are relatively more predictive than the other TBC models, they alone do not warrant the authors' recommendations.
-
-# Informal Notes
-
-1. Much more can be said about these models, but that would lengthen this already long report!
-
-2. Future work could involve the remaining ~12 TBC models, but I don't expect to have time to do so.
-
-3. I'm aware bootstrap percentile confidence intervals may not be reliable. However, I've included them for holdout data as a soft comparison with the results from the training data.
-
-4. The TBC_Bootstrap procedure technically doesn't set a random seed for the boot package validation work. In a future version, I could do this and rerun the procedure. However, I don't think it would change any conclusions of this report.
-
-5. I chose 10,000 bootstrap iterations *because* it seemed excessive. Prelim work with the poverty model (not included here) suggested that even 5,000 iterations was adequate. I wanted this large enough that a reader wouldn't discredit the conclusions for having too few bootstrap iterations.
+|     The only TBC models with optimal MCC values near 50% are those with binary targets related to education: receiving a GED, receiving a Bachelor's, or dropping out of school. Although I am not a social psychologist, these results seem plausible, i.e., having lower IQ has a stronger association with having academic issues. Again using the above guidelines for interpreting correlations, the optimal MCC values for these models are "moderate." Even though the model for "Get Bachelors" had the largest MCC value of `r outputs[label == 'get_bachelors', paste0(floor(mcc.optimism.corrected.training * 1e4)/1e2, '%')]`, its optimal classifications did not materially follow the observed data. While these three models are relatively more predictive than the other TBC models, they alone do not warrant the authors' recommendations.
 
 # Appendix
 
@@ -1331,7 +1340,7 @@ kable(
 )
 ```
 
-## Table of Optimal MCC Values {.tabset .tabset-fade}
+## Table of Optimal MCC Values {#tableOptimalMCC .tabset .tabset-fade}
 
 ### Training Data
 
@@ -1423,7 +1432,6 @@ DT.compare.bootCI.melt[
 ]
 ```
 
-
 One way to test whether the results of this analysis are reasonable is to reproduce part of it using the _boot_ package, which facilitates bootstrapping and can calculate BCa intervals. In the script used to store the project's results (i.e., *TBC_Bootstrap*), the _boot::boot_ function performs the following steps:
 
 1) Fits a probability model to a bootstrapped version of each model's training data
@@ -1465,7 +1473,29 @@ kable(
 ) %>% kable_styling(bootstrap_options = "striped", full_width = F)
 ```
 
-## Session Info
+## Informal Notes
+
+1. Much more can be said about these models, but that would lengthen this already long report!
+
+2. Future work could involve the remaining ~12 TBC models, but I don't expect to have time to do so.
+
+3. I'm aware bootstrap percentile confidence intervals may have issues. However, I've included them for holdout data as a soft comparison with the results from the training data. The holdout already has the issue of being much thinner relative to the training data for each model.
+
+4. The TBC_Bootstrap procedure technically doesn't set a random seed for the boot package validation work. In a future version, I could do this and rerun the procedure. However, I don't think it would change any conclusions of this report.
+
+5. I chose 10,000 bootstrap iterations *because* it seemed excessive. Prelim work with the poverty model (not included here) suggested that even 5,000 iterations was adequate. I wanted enough iterations that a reader wouldn't discredit the conclusions for having too few bootstrap iterations. I guess there could be a section about the convergence of the posted values, but that would take more development time than I have.
+
+6. For completeness, it would be nice to explain BCa intervals, but I think that get's too detailed and distracts from the rest of this report.
+
+7. I chose not to use the boot package for the main analysis because I wanted to better understand bootstrapping. Also, I couldn't get the boot function to work in parallel (on Windows 10), which greatly extended the overall runtime!
+
+8. The suggested table for interpreting correlation values is only used as a common reference for myself and the reader. Interpretation is always be subjective.
+
+9. It's odd that some of the MCC distributions don't have local optima. E.g., see the plot for Unemployed (Highschool Subset). Inspecting the data and code, I still can't explain it.
+
+10. I included bootstrap optimism because I wanted to account for sampling bias, especially for models having thin training data. I also use it to give the results a bit more credibility by estimating and removing (a type of) bias. Looking at the [Table of Optimal MCC Values](#tableOptimalMCC), only a few models had noticeably large optimism estimates, and most of those had thin training data (e.g., highschool or college subsets).
+
+## Session Info{#sessionInfo}
 
 ### R
 
@@ -1519,7 +1549,7 @@ Version 1.1.463
 
 [^2]: Bureau of Labor Statistics, U.S. Department of Labor. National Longitudinal Survey of Youth 1979 cohort, 1979-2012 (rounds 1-25). Produced and distributed by the Center for Human Resource Research, The Ohio State University. Columbus, OH: 2014.
 
-[^3]: prepared for the U.S. Department of Labor by Center for Human Resource Research, The Ohio State University. (2001). NLSY79 users' guide : a guide to the 1979-2000 National Longitudinal Survey of Youth data. Columbus, Ohio :Center for Human Resource Research, Ohio State University.
+[^3]: Prepared for the U.S. Department of Labor by Center for Human Resource Research, The Ohio State University. (2001). NLSY79 users' guide : a guide to the 1979-2000 National Longitudinal Survey of Youth data. Columbus, Ohio :Center for Human Resource Research, Ohio State University.
 
 [^4]: Heckman, J. (1995). Lessons from The Bell Curve. Journal of Political Economy, 103(5), 1091–1120.
 
@@ -1538,3 +1568,5 @@ Version 1.1.463
 [^11]: Harrell, F. E., Lee, K. L., & Mark, D. B. (1996). Tutorial in Biostatistics: Multivariable prognostic models. Statistics in Medicine, 15:361-387.
 
 [^12]: Herrnstein and Murray (1994). Nation.txt, Nation.hdr, and 2TBC_Documentation.ascii. Retrieved from http://www.rasmusen.org/xpacioli/bellcurve.
+
+[^13]: Bradley Efron (1987) Better Bootstrap Confidence Intervals, Journal of the American Statistical Association, 82:397, 171-185, DOI: 10.1080/01621459.1987.10478410.
