@@ -24,14 +24,14 @@ stargazer(
 ```
 
 ```{r header_{{model}}_a2e, results = 'asis'}
-cat('#### Plotting Modeled Probabilities{.tabset .tabset-fade}')
+cat('#### Plotting Modeled Probabilities (Training Data){.tabset .tabset-fade}')
 ```
 
-```{r header_{{model}}_zAFQT89, results = 'asis'}
+```{r header_{{model}}_a2e_training_zAFQT89, results = 'asis'}
 cat('##### zAFQT89')
 ```
 
-```{r appendix_a2e_zAFQT89_{{model}}, fig.show = 'hold', fig.cap = 'Plot of observed vs bootstrapped modeled probabilities across zAFQT89'}
+```{r appendix_a2e_training_zAFQT89_{{model}}, fig.show = 'hold', fig.cap = 'Plot of observed vs bootstrapped modeled probabilities across zAFQT89 (Training Data)'}
 model <- '{{model}}'
 factorSelection <- 'zAFQT89'
 
@@ -47,11 +47,11 @@ plotFrequencyVsProbability.bootCI(
 )
 ```
 
-```{r header_{{model}}_zSES, results = 'asis'}
+```{r header_{{model}}_a2e_training_zSES, results = 'asis'}
 cat('##### zSES')
 ```
 
-```{r appendix_a2e_zSES_{{model}}, fig.show = 'hold', fig.cap = 'Plot of observed vs bootstrapped modeled probabilities across zSES'}
+```{r appendix_a2e_training_zSES_{{model}}, fig.show = 'hold', fig.cap = 'Plot of observed vs bootstrapped modeled probabilities across zSES (Training Data)'}
 model <- '{{model}}'
 factorSelection <- 'zSES'
 
@@ -67,17 +67,81 @@ plotFrequencyVsProbability.bootCI(
 )
 ```
 
-```{r header_{{model}}_zAge, results = 'asis'}
+```{r header_{{model}}_a2e_training_zAge, results = 'asis'}
 cat('##### zAge')
 ```
 
-```{r appendix_a2e_zAge_{{model}}, fig.show = 'hold', fig.cap = 'Plot of observed vs bootstrapped modeled probabilities across zAge'}
+```{r appendix_a2e_training_zAge_{{model}}, fig.show = 'hold', fig.cap = 'Plot of observed vs bootstrapped modeled probabilities across zAge (Training Data)'}
 model <- '{{model}}'
 factorSelection <- 'zAge'
 
 plotFrequencyVsProbability.bootCI(
      DT.factors = inputs[[model]][['DT.model.training']]
     , DT.bootCI = DTs.probability.bootCI.training[[model]][[factorSelection]]
+    , xString = factorSelection
+    , yString = inputs[[model]][['model parameters']][, response]
+    , key = 'ID'
+    , bandingPrecision = 10
+    , alpha = 0.05
+    , response.label = inputs[[model]][['model parameters']][, target.descriptions.formatted]
+)
+```
+
+```{r header_{{model}}_a2e_holdout, results = 'asis'}
+cat('#### Plotting Modeled Probabilities (Holdout Data){.tabset .tabset-fade}')
+```
+
+```{r header_{{model}}_a2e_holdout_zAFQT89, results = 'asis'}
+cat('##### zAFQT89')
+```
+
+```{r appendix_a2e_holdout_zAFQT89_{{model}}, fig.show = 'hold', fig.cap = 'Plot of observed vs bootstrapped modeled probabilities across zAFQT89 (Holdout Data)'}
+model <- '{{model}}'
+factorSelection <- 'zAFQT89'
+
+plotFrequencyVsProbability.bootCI(
+     DT.factors = inputs[[model]][['DT.model.holdout']]
+    , DT.bootCI = DTs.probability.bootCI.holdout[[model]][[factorSelection]]
+    , xString = factorSelection
+    , yString = inputs[[model]][['model parameters']][, response]
+    , key = 'ID'
+    , bandingPrecision = 10
+    , alpha = 0.05
+    , response.label = inputs[[model]][['model parameters']][, target.descriptions.formatted]
+)
+```
+
+```{r header_{{model}}_a2e_holdout_zSES, results = 'asis'}
+cat('##### zSES')
+```
+
+```{r appendix_a2e_holdout_zSES_{{model}}, fig.show = 'hold', fig.cap = 'Plot of observed vs bootstrapped modeled probabilities across zSES (Holdout Data)'}
+model <- '{{model}}'
+factorSelection <- 'zSES'
+
+plotFrequencyVsProbability.bootCI(
+     DT.factors = inputs[[model]][['DT.model.holdout']]
+    , DT.bootCI = DTs.probability.bootCI.holdout[[model]][[factorSelection]]
+    , xString = factorSelection
+    , yString = inputs[[model]][['model parameters']][, response]
+    , key = 'ID'
+    , bandingPrecision = 10
+    , alpha = 0.05
+    , response.label = inputs[[model]][['model parameters']][, target.descriptions.formatted]
+)
+```
+
+```{r header_{{model}}_a2e_holdout_zAge, results = 'asis'}
+cat('##### zAge')
+```
+
+```{r appendix_a2e_holdout_zAge_{{model}}, fig.show = 'hold', fig.cap = 'Plot of observed vs bootstrapped modeled probabilities across zAge (Holdout Data)'}
+model <- '{{model}}'
+factorSelection <- 'zAge'
+
+plotFrequencyVsProbability.bootCI(
+     DT.factors = inputs[[model]][['DT.model.holdout']]
+    , DT.bootCI = DTs.probability.bootCI.holdout[[model]][[factorSelection]]
     , xString = factorSelection
     , yString = inputs[[model]][['model parameters']][, response]
     , key = 'ID'
@@ -158,20 +222,64 @@ plotPerformanceMetric.cutoff.bootCI(
 )
 ```
 
-```{r header_{{model}}_class, results = 'asis'}
-cat('#### Plotting Modeled Classifications{.tabset .tabset-fade}')
-```
-
 ```{r header_{{model}}_class_training, results = 'asis'}
-cat('##### Training')
+cat('#### Plotting Modeled Classifications (Training Data){.tabset .tabset-fade}')
 ```
 
-```{r appendix_class_training_{{model}}, fig.show = 'hold', fig.cap = 'Plot comparing bootstrapped classifications and modeled probabilities (Training Data)'}
+```{r header_{{model}}_class_training_zAFQT89, results = 'asis'}
+cat('##### zAFQT89')
+```
+
+```{r appendix_class_training_zAFQT89_{{model}}, fig.show = 'hold', fig.cap = 'Plot comparing bootstrapped classifications and modeled probabilities across zAFQT89 (Training Data)'}
+factorSelection <- 'zAFQT89'
+
 plotFrequencyVsClassification.bootCI(
   DT.factors = inputs[[model]][['DT.model.training']]
-  , DT.classification.bootCI = DTs.mcc.classification.bootCI.training[[model]][['zAFQT89']]
-  , DT.probabilities.bootCI = DTs.probability.bootCI.training[[model]][['zAFQT89']]
-  , xString = 'zAFQT89'
+  , DT.classification.bootCI = DTs.mcc.classification.bootCI.training[[model]][[factorSelection]]
+  , DT.probabilities.bootCI = DTs.probability.bootCI.training[[model]][[factorSelection]]
+  , xString = factorSelection
+  , yString = outputs[label == model, response]
+  , cutoff = outputs[label == model, cutoff.mcc.training]
+  , key = 'ID'
+  , bandingPrecision = 10
+  , alpha = 0.05
+  , response.label = outputs[label == model, target.descriptions.formatted]
+)
+```
+
+```{r header_{{model}}_class_training_zSES, results = 'asis'}
+cat('##### zSES')
+```
+
+```{r appendix_class_training_zSES_{{model}}, fig.show = 'hold', fig.cap = 'Plot comparing bootstrapped classifications and modeled probabilities across zSES (Training Data)'}
+factorSelection <- 'zSES'
+
+plotFrequencyVsClassification.bootCI(
+  DT.factors = inputs[[model]][['DT.model.training']]
+  , DT.classification.bootCI = DTs.mcc.classification.bootCI.training[[model]][[factorSelection]]
+  , DT.probabilities.bootCI = DTs.probability.bootCI.training[[model]][[factorSelection]]
+  , xString = factorSelection
+  , yString = outputs[label == model, response]
+  , cutoff = outputs[label == model, cutoff.mcc.training]
+  , key = 'ID'
+  , bandingPrecision = 10
+  , alpha = 0.05
+  , response.label = outputs[label == model, target.descriptions.formatted]
+)
+```
+
+```{r header_{{model}}_class_training_zAge, results = 'asis'}
+cat('##### zAge')
+```
+
+```{r appendix_class_training_zAge_{{model}}, fig.show = 'hold', fig.cap = 'Plot comparing bootstrapped classifications and modeled probabilities across zAge (Training Data)'}
+factorSelection <- 'zAge'
+
+plotFrequencyVsClassification.bootCI(
+  DT.factors = inputs[[model]][['DT.model.training']]
+  , DT.classification.bootCI = DTs.mcc.classification.bootCI.training[[model]][[factorSelection]]
+  , DT.probabilities.bootCI = DTs.probability.bootCI.training[[model]][[factorSelection]]
+  , xString = factorSelection
   , yString = outputs[label == model, response]
   , cutoff = outputs[label == model, cutoff.mcc.training]
   , key = 'ID'
@@ -182,15 +290,63 @@ plotFrequencyVsClassification.bootCI(
 ```
 
 ```{r header_{{model}}_class_holdout, results = 'asis'}
-cat('##### Holdout')
+cat('#### Plotting Modeled Classifications (Holdout Data){.tabset .tabset-fade}')
 ```
 
-```{r appendix_class_holdout_{{model}}, fig.show = 'hold', fig.cap = 'Plot comparing bootstrapped classifications and modeled probabilities (Holdout Data)'}
+```{r header_{{model}}_class_holdout_zAFQT89, results = 'asis'}
+cat('##### zAFQT89')
+```
+
+```{r appendix_class_holdout_zAFQT89_{{model}}, fig.show = 'hold', fig.cap = 'Plot comparing bootstrapped classifications and modeled probabilities across zAFQT89 (Holdout Data)'}
+factorSelection <- 'zAFQT89'
+
 plotFrequencyVsClassification.bootCI(
   DT.factors = inputs[[model]][['DT.model.holdout']]
-  , DT.classification.bootCI = DTs.mcc.classification.bootCI.holdout[[model]][['zAFQT89']]
-  , DT.probabilities.bootCI = DTs.probability.bootCI.holdout[[model]][['zAFQT89']]
-  , xString = 'zAFQT89'
+  , DT.classification.bootCI = DTs.mcc.classification.bootCI.holdout[[model]][[factorSelection]]
+  , DT.probabilities.bootCI = DTs.probability.bootCI.holdout[[model]][[factorSelection]]
+  , xString = factorSelection
+  , yString = outputs[label == model, response]
+  , cutoff = outputs[label == model, cutoff.mcc.training]
+  , key = 'ID'
+  , bandingPrecision = 10
+  , alpha = 0.05
+  , response.label = outputs[label == model, target.descriptions.formatted]
+)
+```
+
+```{r header_{{model}}_class_holdout_zSES, results = 'asis'}
+cat('##### zSES')
+```
+
+```{r appendix_class_holdout_zSES_{{model}}, fig.show = 'hold', fig.cap = 'Plot comparing bootstrapped classifications and modeled probabilities across zSES (Holdout Data)'}
+factorSelection <- 'zSES'
+
+plotFrequencyVsClassification.bootCI(
+  DT.factors = inputs[[model]][['DT.model.holdout']]
+  , DT.classification.bootCI = DTs.mcc.classification.bootCI.holdout[[model]][[factorSelection]]
+  , DT.probabilities.bootCI = DTs.probability.bootCI.holdout[[model]][[factorSelection]]
+  , xString = factorSelection
+  , yString = outputs[label == model, response]
+  , cutoff = outputs[label == model, cutoff.mcc.training]
+  , key = 'ID'
+  , bandingPrecision = 10
+  , alpha = 0.05
+  , response.label = outputs[label == model, target.descriptions.formatted]
+)
+```
+
+```{r header_{{model}}_class_holdout_zAge, results = 'asis'}
+cat('##### zAge')
+```
+
+```{r appendix_class_holdout_zAge_{{model}}, fig.show = 'hold', fig.cap = 'Plot comparing bootstrapped classifications and modeled probabilities across zAge (Holdout Data)'}
+factorSelection <- 'zAge'
+
+plotFrequencyVsClassification.bootCI(
+  DT.factors = inputs[[model]][['DT.model.holdout']]
+  , DT.classification.bootCI = DTs.mcc.classification.bootCI.holdout[[model]][[factorSelection]]
+  , DT.probabilities.bootCI = DTs.probability.bootCI.holdout[[model]][[factorSelection]]
+  , xString = factorSelection
   , yString = outputs[label == model, response]
   , cutoff = outputs[label == model, cutoff.mcc.training]
   , key = 'ID'
