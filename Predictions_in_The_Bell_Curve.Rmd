@@ -37,7 +37,7 @@ $(document).ready(function() {
 knitr::opts_chunk$set(
   warning = FALSE
   , message = FALSE
-  , dev = 'svg'
+  , dev = 'png'
   , root.dir = "B:/DATA 512/Final Project"
   , fig.align = "center"
   , fig.width = 12
@@ -475,7 +475,7 @@ kable(
   ]
   , caption = 'Table comparing different classification scenarios (i.e., confusion matrix)'
   , align = rep('c', 3)
-) %>% kable_styling(bootstrap_options = "striped", full_width = F, position = 'center')
+) %>% kable_styling(bootstrap_options = "striped", full_width = FALSE, position = 'center')
 ```
 
 |     A common classification performance metric is called "accuracy", which here means the percent of NLSY79 participants that were correctly classified as entering poverty or not in 1989. At the cutoff probability of `r Pov89_modeled.2stdev.formatted`, the accuracy is `r accuracy.poverty.formatted`. While this seems very high, the above figure shows its weakness: __very few of the NLSY79 participants that truly entered poverty were classified to do so__ (as shown in the purple 'TP' region and the above table). Instead, most of the "true" classifications came from participants who did not enter poverty in 1989 (as shown in the blue 'TN' region). Hence, the accuracy metric is reflecting that the binary target is _rare_, more than it's describing the performance of the underlying model. In comparison, the MCC value using the same cutoff probability is `r mcc.poverty.formatted`, which better agrees with the poorly populated 'TP' region in purple.
@@ -718,7 +718,7 @@ kable(
 ) %>%
   kable_styling(
     bootstrap_options = "striped"
-    , full_width = F
+    , full_width = FALSE
   )
 ```
 
@@ -813,7 +813,7 @@ kable(
 ) %>%
   kable_styling(
     bootstrap_options = "striped"
-    , full_width = F
+    , full_width = FALSE
   ) %>%
   add_header_above(c(' ' = 1, 'MCC' = 2, ' ' = 1)) %>%
   row_spec(2, hline_after = TRUE)
@@ -894,7 +894,8 @@ kable(
 ) %>%
   kable_styling(
     bootstrap_options = "striped"
-    , full_width = F
+    , full_width = FALSE
+    , fixed_thead = TRUE
   ) %>%
   add_header_above(c(' ' = 3, 'NLSY79 Participants' = 2, 'Frequency of Binary Target' = 2))
 ```
@@ -983,7 +984,7 @@ For readers that would like to reproduce this project:
 
     - Takes 4 - 5 hours
 
-2. Review the initial parameters for the batch run procedure on lines 55 - 57 to make sure they're reasonable for your machine.
+2. Review the initial parameters for the batch run procedure on [lines 55 - 57](https://github.com/wfrierson/predictions_in_the_bell_curve/blob/master/200%20Code/TBC_Bootstrap.R#L55) to make sure they're reasonable for your machine, namely, whether to enable parallel processing and how many CPUs to use.
 
 # Results{#results}
 
@@ -1244,8 +1245,8 @@ ggplot(
     , alpha = 0.35
   ) +
   scale_color_brewer(palette = "Dark2") +
-  xlab('Optimal MCC Value (Training Data)') + 
-  ylab('Optimal MCC Value (Holdout Data)') + 
+  xlab('Optimal MCC Value (Training Data, optimism-corrected)') + 
+  ylab('Optimal MCC Value (Holdout Data, optimism-corrected)') + 
   lims(x = c(-0.2,1), y = c(-0.2,1)) + 
   theme_bw() + 
   theme(
@@ -1336,7 +1337,8 @@ kable(
   , align = c(rep('l', 3), 'c')
 ) %>% kable_styling(
   bootstrap_options = "striped"
-  , full_width = F
+  , full_width = FALSE
+  , fixed_thead = TRUE
 )
 ```
 
@@ -1362,7 +1364,11 @@ kable(
   , align = rep('c', 8)
   , caption = 'Table of Optimal MCC values by TBC Model (Training Data)'
 ) %>% 
-  kable_styling(bootstrap_options = "striped", full_width = F) %>%
+  kable_styling(
+    bootstrap_options = "striped"
+    , full_width = FALSE
+    , fixed_thead = TRUE
+  ) %>%
   add_header_above(c(' ' = 4, 'Optimal MCC' = 3, ' ' = 1))
 ```
 
@@ -1386,7 +1392,11 @@ kable(
   , align = rep('c', 8)
   , caption = 'Table of Optimal MCC values by TBC Model (Holdout Data)'
 ) %>% 
-  kable_styling(bootstrap_options = "striped", full_width = F) %>%
+  kable_styling(
+    bootstrap_options = "striped"
+    , full_width = FALSE
+    , fixed_thead = TRUE
+  ) %>%
   add_header_above(c(' ' = 4, 'Optimal MCC' = 3, ' ' = 1))
 ```
 
@@ -1432,7 +1442,7 @@ DT.compare.bootCI.melt[
 ]
 ```
 
-One way to test whether the results of this analysis are reasonable is to reproduce part of it using the _boot_ package, which facilitates bootstrapping and can calculate BCa intervals. In the script used to store the project's results (i.e., *TBC_Bootstrap*), the _boot::boot_ function performs the following steps:
+One way to test whether the results of this analysis are reasonable is to reproduce part of it using the `boot` package, which facilitates bootstrapping and can calculate BCa intervals. In the script used to store the project's results (i.e., [TBC_Bootstrap.R](https://github.com/wfrierson/predictions_in_the_bell_curve/blob/master/200%20Code/TBC_Bootstrap.R)), the `boot::boot` function performs the following steps:
 
 1) Fits a probability model to a bootstrapped version of each model's training data
 
@@ -1440,7 +1450,7 @@ One way to test whether the results of this analysis are reasonable is to reprod
 
 3) Calculates the MCC value for that bootstrapped model
 
-|     The plot below compares the MCC estimates and BCa intervals as calculated by this analysis as well as the _boot_ package. The MCC estimates are identical and the BCa intervals tend to agree very well. The model labels are ordered by the largest difference in BCa bounds. E.g., if the difference in lower BCa bounds for the Get GED model is `r DT.compare.bootCI[label == 'get_ged', lb.diff]`, and for the upper BCa bounds `r DT.compare.bootCI[label == 'get_ged', ub.diff]`, then the largest difference in BCa bounds for this model is `r DT.compare.bootCI[label == 'get_ged', ub.diff]`. The model with the most extreme difference in BCa bounds is `r DT.compare.bootCI[order(-maxAbs.diff)][1][tbc.models, on = 'label', nomatch = 0][, labelAppendix]` with a value of `r DT.compare.bootCI[order(-maxAbs.diff)][1][tbc.models, on = 'label', nomatch = 0][, maxAbs.diff]`.
+|     The plot below compares the MCC estimates and BCa intervals as calculated by this analysis as well as the `boot` package. The MCC estimates are identical and the BCa intervals tend to agree very well. The model labels are ordered by the largest difference in BCa bounds. E.g., if the difference in lower BCa bounds for the Get GED model is `r DT.compare.bootCI[label == 'get_ged', lb.diff]`, and for the upper BCa bounds `r DT.compare.bootCI[label == 'get_ged', ub.diff]`, then the largest difference in BCa bounds for this model is `r DT.compare.bootCI[label == 'get_ged', ub.diff]`. The model with the most extreme difference in BCa bounds is `r DT.compare.bootCI[order(-maxAbs.diff)][1][tbc.models, on = 'label', nomatch = 0][, labelAppendix]` with a value of `r DT.compare.bootCI[order(-maxAbs.diff)][1][tbc.models, on = 'label', nomatch = 0][, maxAbs.diff]`.
 
 ```{r validateWithBootPackage_plot, fig.cap = 'Plot comparing bootstrapped MCC estimates and confidence intervals measured by this analysis and the boot package'}
 ggplot(
@@ -1470,7 +1480,11 @@ kable(
   ]
   , align = c('l', 'c')
   , caption = 'Table comparing bootstrapped MCC estimates and confidence intervals measured by this analysis and the boot package'
-) %>% kable_styling(bootstrap_options = "striped", full_width = F)
+) %>% kable_styling(
+    bootstrap_options = "striped"
+    , full_width = FALSE
+    , fixed_thead = TRUE
+  )
 ```
 
 ## Informal Notes
@@ -1487,13 +1501,15 @@ kable(
 
 6. For completeness, it would be nice to explain BCa intervals, but I think that get's too detailed and distracts from the rest of this report.
 
-7. I chose not to use the boot package for the main analysis because I wanted to better understand bootstrapping. Also, I couldn't get the boot function to work in parallel (on Windows 10), which greatly extended the overall runtime!
+7. I chose not to use the `boot` package for the main analysis because I wanted to better understand bootstrapping. Also, I couldn't get the boot function to work in parallel (on Windows 10), which greatly extended the overall runtime!
 
-8. The suggested table for interpreting correlation values is only used as a common reference for myself and the reader. Interpretation is always be subjective.
+8. The suggested table for interpreting correlation values is only used as a common reference for myself and the reader. Interpretation is always subjective.
 
 9. It's odd that some of the MCC distributions don't have local optima. E.g., see the plot for Unemployed (Highschool Subset). Inspecting the data and code, I still can't explain it.
 
 10. I included bootstrap optimism because I wanted to account for sampling bias, especially for models having thin training data. I also use it to give the results a bit more credibility by estimating and removing (a type of) bias. Looking at the [Table of Optimal MCC Values](#tableOptimalMCC), only a few models had noticeably large optimism estimates, and most of those had thin training data (e.g., highschool or college subsets).
+
+11. The code needs better documentation, especially regarding parameters and returned values.
 
 ## Session Info{#sessionInfo}
 
@@ -1505,7 +1521,7 @@ sessionInfo()
 
 ### RStudio
 
-Version 1.1.463
+Version 1.2.1335
 
 # References
 
