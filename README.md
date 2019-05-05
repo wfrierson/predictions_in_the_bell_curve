@@ -1,5 +1,7 @@
 This repo started as a final project for a data science master's course. None of it has been peer reviewed.
 
+For those interested in reproducing the bootstrapping results, please see [this section](https://wfrierson.github.io/predictions_in_the_bell_curve/Predictions_in_The_Bell_Curve.html#reproducing_this_project) of the report for details.
+
 ***
 Overview
 ***
