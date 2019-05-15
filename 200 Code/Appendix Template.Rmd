@@ -222,6 +222,62 @@ plotPerformanceMetric.cutoff.bootCI(
 )
 ```
 
+```{r header_{{model}}_confusion, results = 'asis'}
+cat('#### Optimal Confusion Matrices{.tabset .tabset-fade}')
+```
+
+```{r header_{{model}}_confusion_training, results = 'asis'}
+cat('##### Training')
+```
+
+```{r confusionMatrix_{{model}}_training}
+model <- '{{model}}'
+response <- inputs[[model]][['model parameters']][, response]
+response.modeled <- inputs[[model]][['model parameters']][, response.modeled]
+optimal.cutoff <- outputs[label == model, cutoff.mcc.training]
+
+kable(
+  inputs[[model]][['DT.model.training']][
+    , .(
+      `Classified as False` = sum(as.integer(get(response.modeled) <= optimal.cutoff))
+      , `Classified as True` = sum(as.integer(get(response.modeled) > optimal.cutoff))
+    )
+    , keyby = .(Target = ifelse(get(response) == 0, 'Target did not occur', 'Target occurred'))
+  ]
+  , align = rep('c', 2)
+) %>% kable_styling(
+    bootstrap_options = "striped"
+    , full_width = FALSE
+    , fixed_thead = TRUE
+  )
+```
+
+```{r header_{{model}}_confusion_holdout, results = 'asis'}
+cat('##### Holdout')
+```
+
+```{r confusionMatrix_{{model}}_holdout}
+model <- '{{model}}'
+response <- inputs[[model]][['model parameters']][, response]
+response.modeled <- inputs[[model]][['model parameters']][, response.modeled]
+optimal.cutoff <- outputs[label == model, cutoff.mcc.holdout]
+
+kable(
+  inputs[[model]][['DT.model.holdout']][
+    , .(
+      `Classified as False` = sum(as.integer(get(response.modeled) <= optimal.cutoff))
+      , `Classified as True` = sum(as.integer(get(response.modeled) > optimal.cutoff))
+    )
+    , keyby = .(Target = ifelse(get(response) == 0, 'Target did not occur', 'Target occurred'))
+  ]
+  , align = rep('c', 2)
+) %>% kable_styling(
+    bootstrap_options = "striped"
+    , full_width = FALSE
+    , fixed_thead = TRUE
+  )
+```
+
 ```{r header_{{model}}_class_training, results = 'asis'}
 cat('#### Plotting Modeled Classifications (Training Data){.tabset .tabset-fade}')
 ```
