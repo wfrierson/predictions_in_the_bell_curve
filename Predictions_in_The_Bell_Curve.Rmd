@@ -315,12 +315,6 @@ plot.training.actual <- ggplot(
   geom_point() + 
   theme_bw() + 
   ylab(paste('%', tbc.models[label == 'poverty', target.description])) 
-# +
-#   labs(
-#     color = 'Category'
-#     , shape = 'Category'
-#   )
-
 ggplotly(
   plot.training.actual + 
     geom_line(aes(y = modeled), color = lightBlue) + 
@@ -940,7 +934,7 @@ For 10,000 bootstrap iterations and each TBC model:
 
 7. Lastly, for each model, find the cutoff value with the largest mean bootstrapped MCC value, i.e., the "optimal cutoff".
 
-__Note__: MCC data related to the holdout sample use bootstrapped percentile confidence intervals because the fitted probability models were based on training data. Hence, BCa intervals aren't meaningful for MCC holdout data.
+__Note__: *MCC data related to the holdout sample use bootstrapped percentile confidence intervals because the fitted probability models were based on training data. Hence, BCa intervals aren't meaningful for MCC holdout data.*
 
 ```{r algorithm, out.width = '60%', fig.pos = 'H', fig.cap = 'Procedure used to produce distributions of MCC values with optimism correction'}
 # For LaTeX code used to generate this png, see:
@@ -1019,7 +1013,13 @@ The three plots below show the average of the poverty target and the modeled pro
 
 |     The black data points represent averages of the poverty target for NLSY79 participants (i.e,. observed data). The blue line represents the averaged modeled probabilities calculated from the original training data. The light blue ribbon represents 95% (BCa) confidence intervals for the modeled probability. The bar chart above the main plot reflects the proportion of NLSY79 participants included for each bucket of the x-axis. (This helps indicate which buckets have more or less weight.)
 
-|     Both zAFQT89 and zSES tend to have a monotonically decreasing relationship with the poverty target. The plot with zAFQT89 is the least noisy of the 3 and that of zAge is the most noisy. By inspection, the modeled probability lines show that zAFQT89 and zSES influence the poverty target, but do not capture a significant amount of variance in the data. This is also represented by the 95% confidence intervals for zAFQT89, since some data points (even some with large weights, according to the bar chart) lie outside the intervals.
+|     Both zAFQT89 and zSES tend to have a monotonically decreasing relationship with the poverty target. The plot with zAFQT89 is the least noisy of the 3 and that of zAge is the most noisy. The modeled probability lines show that zAFQT89 and zSES influence the poverty target, as seen by their:
+
+* Curves significantly varying across the x-axis, and
+
+* 95% confidence intervals not being large enough to allow the possibility of a flat line. 
+
+On the other hand, zAge has extremely wide confidence intervals that could include a flat line. (This is expected, though, since zAge was included as a control and not a parameter that would impact the target.)
 
 #### zAFQT89
 
@@ -1079,7 +1079,11 @@ plotFrequencyVsProbability.bootCI(
 
 The two plots below show the bootstrapped distributions of MCC values across a dense grid of cutoff values. The first plot is the MCC distribution when evaluated on the training data, the second is that using the holdout data. 
 
-|     The solid blue line represents the MCC values calculated from the original data (hence its large noise). The dashed blue line represents the mean bootstrapped MCC values. The light blue ribbon represents the 95% confidence intervals for MCC values. The bar chart above the main plot represents the proportion of non-NULL MCC values calculated for that cutoff value. (MCC is undefined when its denominator is 0, which can happen when there are no true positive classifications). Lastly, the black vertical dashed line identifies the optimal cutoff probability within that dataset. The adjacent table shows the optimal cutoff probabilities and MCC values (split by the mean bootstrapped value, apparent value from the original data, and optimism-corrected value), including their 95% confidence intervals.
+|     The solid blue line represents the MCC values calculated from the original data (hence its large noise). The dashed blue line represents the mean bootstrapped MCC values. The light blue ribbon represents the 95% confidence intervals for MCC values. The bar chart above the main plot represents the proportion of non-NULL MCC values calculated for that cutoff value. (MCC is undefined when its denominator is 0, which can happen when there are no true positive classifications, e.g.). Lastly, the black vertical dashed line identifies the optimal cutoff probability within that dataset. The adjacent table shows the optimal cutoff probabilities and MCC values (split by the mean bootstrapped value, apparent value from the original data, and optimism-corrected value), including their 95% confidence intervals.
+
+<br/>
+
+__Note__: *The confidence interval for the training data set is noiser than that from the holdout data, because the training data uses bias-corrected accelerated (BCa) confidence intervals whereas the holdout data uses bootstrapped percentile confidence intervals. BCa intervals (roughly) expand upon the noise observed in the apparent intervals.*
 
 ```{r poverty_bootCI_table, fig.show = 'hold'}
 model <- 'poverty'
@@ -1155,7 +1159,7 @@ The two plots below show the averages of the poverty target, modeled probabiliti
 
 |     The black data points represent averages of the poverty target for NLSY79 participants (same as before). The blue line represents the averaged modeled classifications calculated from the original data (and using the optimal cutoff of `r paste0(floor(outputs[label == model, cutoff.mcc.training] * 1e4) / 1e2, '%')`). The light blue ribbon represents 95% confidence intervals for the modeled classifications. The grey line represents the averaged modeled probabilities calculated from the original data. The light grey ribbon represents 95% confidence intervals for the modeled probability. The bar chart above the main plot reflects the proportion of NLSY79 participants included for each bucket of the x-axis (same as before).
 
-|     Overall, the average classifications poorly reflect the observed values for both datasets, which is consistent with their optimal MCC values below 35%. If the model performed very well, the two confidence intervals would have larger overlapping regions across the zAFQT89 buckets. For these two plots, the confidence intervals rapidly deviate from each other for zAFQT89 values below -1.
+|     Overall, the average classifications poorly reflect the observed values for both datasets, which is consistent with their optimal MCC values below 35%. If the model performed very well, the blue and grey confidence intervals would have larger overlapping regions across the zAFQT89 buckets with larger weights. For these two plots, the confidence intervals rapidly deviate from each other for zAFQT89 values below -1. For regions where the weights are largest (e.g., zAFQT89 = 0), the confidence intervals do not even intersect.
 
 #### Training Data
 
@@ -1302,7 +1306,7 @@ ggplot(
   scale_color_brewer(palette = "Dark2") +
   xlab('Optimal MCC Value (Training Data)') + 
   ylab('Optimal MCC Value (Holdout Data)') + 
-  lims(x = c(-0.35,1), y = c(-0.35,1)) + 
+  lims(x = c(-0.5,1), y = c(-0.5,1)) + 
   theme_bw() + 
   theme(
     axis.text=element_text(size=16)
@@ -1314,9 +1318,13 @@ ggplot(
 
 # Discussion{#discussion}
 
-What does the [plot comparing optimal MCC values](#optimalMCC) mean? Using the [guidelines for interpreting MCC values](#mcc) listed above, nearly all TBC models have a low correlation (i.e., MCC < 50%) between their observed binary target and the bootstrapped classification when evaluated on either training or holdout data. The classification plots tell a similar story: the confidence intervals for the optimal classifications tend to not follow the general trend of the observed data. *Combined, these properties suggest that TBC's probability models are not materially predictive and so they inadequately support the authors' public policy recommendations.*
+What does the [plot comparing optimal MCC values](#optimalMCC) mean? Using the [guidelines for interpreting MCC values](#mcc) listed above, nearly all TBC models have a low correlation (i.e., MCC < 50%) between their observed binary target and the bootstrapped classification when evaluated on either training or holdout data. The classification plots tell a similar story: the confidence intervals for the optimal classifications tend to not follow the general trend of the observed data. 
 
-|     The only TBC models with optimal MCC values near 50% are those with binary targets related to education: receiving a GED, receiving a Bachelor's, or dropping out of school. Although I am not a social psychologist, these results seem plausible, i.e., having lower IQ has a stronger association with having academic issues. Again using the above guidelines for interpreting correlations, the optimal MCC values for these models are "moderate." Even though the model for "Get Bachelors" had the largest MCC value of `r outputs[label == 'get_bachelors', paste0(floor(mcc.optimism.corrected.training * 1e4)/1e2, '%')]`, its optimal classifications did not materially follow the observed data. While these three models are relatively more predictive than the other TBC models, they alone do not warrant the authors' recommendations.
+|     The only TBC models with optimal MCC values near 50% are those with binary targets related to education: receiving a GED, receiving a Bachelor's, or dropping out of school. Although I am not a social psychologist, these results seem plausible, i.e., having lower IQ has a stronger association with having academic issues. Again using the above guidelines for interpreting correlations, the optimal MCC values for these models are "moderate." Even though the model for "Get Bachelors" had the largest MCC value of `r outputs[label == 'get_bachelors', paste0(floor(mcc.optimism.corrected.training * 1e4)/1e2, '%')]`, its optimal classifications did not materially follow the observed data. While these three models are relatively more predictive than the other TBC models, they alone do not warrant the authors' recommendations.  
+
+<br/>
+
+*Combined, these properties suggest that TBC's probability models are not materially predictive and so they inadequately support the authors' public policy recommendations.*
 
 # Appendix
 
@@ -1505,7 +1513,7 @@ kable(
 
 8. The suggested table for interpreting correlation values is only used as a common reference for myself and the reader. Interpretation is always subjective.
 
-9. It's odd that some of the MCC distributions don't have local optima. E.g., see the plot for Unemployed (Highschool Subset). Inspecting the data and code, I still can't explain it.
+9. It's odd that some of the MCC distributions don't have local optima. E.g., see the plot for Unemployed (Highschool Subset). Inspecting the data and code, I still can't explain it. I suspect this has to do with these data sets having fewer NLSY79 participants.
 
 10. I included bootstrap optimism because I wanted to account for sampling bias, especially for models having thin training data. I also use it to give the results a bit more credibility by estimating and removing (a type of) bias. Looking at the [Table of Optimal MCC Values](#tableOptimalMCC), only a few models had noticeably large optimism estimates, and most of those had thin training data (e.g., highschool or college subsets).
 
